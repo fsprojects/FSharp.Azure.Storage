@@ -17,7 +17,7 @@
             static let recordFields = 
                 FSharpType.GetRecordFields typeof<'T> |> Array.map (fun p -> p.Name)
             static let recordReader = 
-                FSharpValue.PreComputeRecordReader typeof<'T> >> Seq.map EntityProperty.CreateEntityPropertyFromObject
+                FSharpValue.PreComputeRecordReader typeof<'T>
 
             member this.Record with get() = record
 
@@ -31,7 +31,11 @@
                     notImplemented()
 
                 member this.WriteEntity(operationContext) = 
-                    recordReader(record) |> Seq.zip recordFields |> dict
+                    record 
+                        |> recordReader
+                        |> Seq.map EntityProperty.CreateEntityPropertyFromObject 
+                        |> Seq.zip recordFields 
+                        |> dict
 
         let private createEntityTableOperation (tableOperation : ITableEntity -> TableOperation) getEntityIdentifier record etag =
             let eId = getEntityIdentifier record
