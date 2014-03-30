@@ -111,3 +111,11 @@
             let table = client.GetTableReference name
             let result = table.Execute operation
             { HttpStatusCode = result.HttpStatusCode; Etag = result.Etag }
+
+        let inTableAsync (client: CloudTableClient) name operation = 
+            async {
+                let table = client.GetTableReference name
+                let! result = table.ExecuteAsync operation |> Async.AwaitTask
+                return { HttpStatusCode = result.HttpStatusCode; Etag = result.Etag }
+            }
+            

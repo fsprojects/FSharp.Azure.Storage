@@ -28,6 +28,7 @@ type TableStorageTests() =
     let gameTable = tableClient.GetTableReference gameTableName
 
     let inTable = inTable tableClient
+    let inTableAsync = inTableAsync tableClient
 
     do gameTable.DeleteIfExists() |> ignore
     do gameTable.Create() |> ignore
@@ -52,6 +53,20 @@ type TableStorageTests() =
               HasMultiplayer = true }
 
         let result = game |> insert |> inTable gameTableName
+
+        result.HttpStatusCode |> should equal 204
+        verifyGame game
+
+
+    [<Fact>]
+    let ``can insert a new record asynchronously`` () =
+        let game = 
+            { Name = "Halo 4"
+              Platform = "Xbox 360"
+              Developer = "343 Industries"
+              HasMultiplayer = true }
+
+        let result = game |> insert |> inTableAsync gameTableName |> Async.RunSynchronously
 
         result.HttpStatusCode |> should equal 204
         verifyGame game
