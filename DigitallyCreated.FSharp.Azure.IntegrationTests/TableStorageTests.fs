@@ -7,14 +7,18 @@ open Xunit;
 open FsUnit.Xunit;
 
 type GameSummary = 
-        { Name: string
-          Platform: string
-          Developer : string }
+    { Name: string
+      Platform: string
+      Developer : string }
+    interface ITableIdentifiable with
+        member g.GetIdentifier() = 
+            { PartitionKey = g.Developer; RowKey = g.Name }
+
 type Game = 
-        { Name: string
-          Platform: string
-          Developer : string
-          HasMultiplayer: bool }
+    { [<RowKey>] Name: string
+      Platform: string
+      [<PartitionKey>] Developer : string
+      HasMultiplayer: bool }
 
 type TableStorageTests() = 
     
@@ -22,9 +26,6 @@ type TableStorageTests() =
     let tableClient = account.CreateCloudTableClient()
     let gameTableName = "TestsGame"
     let gameTable = tableClient.GetTableReference gameTableName
-
-    let gameId g = { PartitionKey = g.Developer; RowKey = g.Name }
-    let gameSummaryId (g : GameSummary) = { PartitionKey = g.Developer; RowKey = g.Name }
 
     let inTable = inTable tableClient
 
@@ -50,7 +51,7 @@ type TableStorageTests() =
               Developer = "343 Industries"
               HasMultiplayer = true }
 
-        let result = game |> insert gameId |> inTable gameTableName
+        let result = game |> insert |> inTable gameTableName
 
         result.HttpStatusCode |> should equal 204
         verifyGame game
@@ -64,8 +65,8 @@ type TableStorageTests() =
               Developer = "343 Industries"
               HasMultiplayer = true }
 
-        game |> insert gameId |> inTable gameTableName |> ignore
-        (fun () -> game |> insert gameId |> inTable gameTableName |> ignore) 
+        game |> insert |> inTable gameTableName |> ignore
+        (fun () -> game |> insert |> inTable gameTableName |> ignore) 
             |> should throw typeof<StorageException>
 
 
@@ -77,14 +78,14 @@ type TableStorageTests() =
               Developer = "343 Industries"
               HasMultiplayer = true }
 
-        game |> insert gameId |> inTable gameTableName |> ignore
+        game |> insert |> inTable gameTableName |> ignore
 
         let gameChanged = 
             { game with
                 Platform = "PC"
                 HasMultiplayer = false }
 
-        let result = gameChanged |> insertOrReplace gameId |> inTable gameTableName
+        let result = gameChanged |> insertOrReplace |> inTable gameTableName
         result.HttpStatusCode |> should equal 204
         verifyGame gameChanged
 
@@ -97,14 +98,14 @@ type TableStorageTests() =
               Developer = "343 Industries"
               HasMultiplayer = true }
 
-        game |> insert gameId |> inTable gameTableName |> ignore
+        game |> insert |> inTable gameTableName |> ignore
 
         let gameChanged = 
             { game with
                 Platform = "PC"
                 HasMultiplayer = false }
 
-        let result = gameChanged |> forceReplace gameId |> inTable gameTableName
+        let result = gameChanged |> forceReplace |> inTable gameTableName
         result.HttpStatusCode |> should equal 204
         verifyGame gameChanged
 
@@ -117,14 +118,14 @@ type TableStorageTests() =
               Developer = "343 Industries"
               HasMultiplayer = true }
 
-        let originalResult = game |> insert gameId |> inTable gameTableName
+        let originalResult = game |> insert |> inTable gameTableName
 
         let gameChanged = 
             { game with
                 Platform = "PC"
                 HasMultiplayer = false }
 
-        let result = (originalResult.Etag, gameChanged) |> replace gameId |> inTable gameTableName
+        let result = (gameChanged, originalResult.Etag) |> replace |> inTable gameTableName
         result.HttpStatusCode |> should equal 204
         verifyGame gameChanged
 
@@ -137,14 +138,14 @@ type TableStorageTests() =
               Developer = "343 Industries"
               HasMultiplayer = true }
 
-        let originalResult = game |> insert gameId |> inTable gameTableName
+        let originalResult = game |> insert |> inTable gameTableName
 
         let gameChanged = 
             { game with
                 Platform = "PC"
                 HasMultiplayer = false }
 
-        (fun () ->("bogus", gameChanged) |> replace gameId |> inTable gameTableName |> ignore)
+        (fun () -> (gameChanged, "bogus") |> replace |> inTable gameTableName |> ignore)
             |> should throw typeof<StorageException>
 
 
@@ -156,14 +157,14 @@ type TableStorageTests() =
               Developer = "343 Industries"
               HasMultiplayer = true }
 
-        game |> insert gameId |> inTable gameTableName |> ignore
+        game |> insert |> inTable gameTableName |> ignore
 
         let gameSummary = 
             { GameSummary.Name = game.Name
               Platform = "PC"
               Developer = game.Developer }
 
-        let result = gameSummary |> insertOrMerge gameSummaryId |> inTable gameTableName
+        let result = gameSummary |> insertOrMerge |> inTable gameTableName
         result.HttpStatusCode |> should equal 204
         verifyGame { game with Platform = "PC" }
 
@@ -176,14 +177,14 @@ type TableStorageTests() =
               Developer = "343 Industries"
               HasMultiplayer = true }
 
-        game |> insert gameId |> inTable gameTableName |> ignore
+        game |> insert |> inTable gameTableName |> ignore
 
         let gameSummary = 
             { GameSummary.Name = game.Name
               Platform = "PC"
               Developer = game.Developer }
 
-        let result = gameSummary |> forceMerge gameSummaryId |> inTable gameTableName
+        let result = gameSummary |> forceMerge |> inTable gameTableName
         result.HttpStatusCode |> should equal 204
         verifyGame { game with Platform = "PC" }
 
@@ -196,14 +197,14 @@ type TableStorageTests() =
               Developer = "343 Industries"
               HasMultiplayer = true }
 
-        let originalResult = game |> insert gameId |> inTable gameTableName
+        let originalResult = game |> insert |> inTable gameTableName
 
         let gameSummary = 
             { GameSummary.Name = game.Name
               Platform = "PC"
               Developer = game.Developer }
 
-        let result = (originalResult.Etag, gameSummary) |> merge gameSummaryId |> inTable gameTableName
+        let result = (gameSummary, originalResult.Etag) |> merge |> inTable gameTableName
         result.HttpStatusCode |> should equal 204
         verifyGame { game with Platform = "PC" }
 
@@ -216,12 +217,12 @@ type TableStorageTests() =
               Developer = "343 Industries"
               HasMultiplayer = true }
 
-        game |> insert gameId |> inTable gameTableName |> ignore
+        game |> insert |> inTable gameTableName |> ignore
 
         let gameSummary = 
             { GameSummary.Name = game.Name
               Platform = "PC"
               Developer = game.Developer }
 
-        (fun () -> ("bogus", gameSummary) |> merge gameSummaryId |> inTable gameTableName |> ignore) 
+        (fun () -> (gameSummary, "bogus") |> merge |> inTable gameTableName |> ignore) 
             |> should throw typeof<StorageException>
