@@ -43,16 +43,13 @@
             let partitionKeyProperty = getPropertyByAttribute<'T, PartitionKeyAttribute, string>()
             let rowKeyProperty = getPropertyByAttribute<'T, RowKeyAttribute, string>()
 
-            let pk = Expr.Var(Var("pk", typeof<string>))
-            let rk = Expr.Var(Var("rk", typeof<string>))
-            let var = Var("var", typeof<'T>)
+            let var = Var("o", typeof<'T>)
+            let pk = Expr.PropertyGet (Expr.Var(var), partitionKeyProperty)
+            let rk = Expr.PropertyGet (Expr.Var(var), rowKeyProperty)
+            
             let recordInitializer = <@ { PartitionKey = %%pk; RowKey = %%rk } @>
-            let quotation = recordInitializer.Substitute(fun v -> 
-                match v.Name with
-                | "pk" -> Some (Expr.PropertyGet (Expr.Var(var), partitionKeyProperty))
-                | "rk" -> Some (Expr.PropertyGet (Expr.Var(var), rowKeyProperty))
-                | _ -> failwith "Unexpected free variable")
-            let quotation = Expr.Cast<'T -> TableEntityIdentifier>(Expr.Lambda(var, quotation))
+
+            let quotation = Expr.Cast<'T -> TableEntityIdentifier>(Expr.Lambda(var, recordInitializer))
             quotation.Compile()()
 
 
