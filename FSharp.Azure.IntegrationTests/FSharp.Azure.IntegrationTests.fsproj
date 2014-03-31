@@ -102,7 +102,7 @@
     <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\DigitallyCreated.FSharp.Azure\DigitallyCreated.FSharp.Azure.fsproj">
+    <ProjectReference Include="..\FSharp.Azure\FSharp.Azure.fsproj">
       <Name>DigitallyCreated.FSharp.Azure</Name>
       <Project>{8602c079-a1cf-445b-92c8-bfeb74d7186a}</Project>
       <Private>True</Private>
