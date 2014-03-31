@@ -13,3 +13,15 @@ module private Utilities =
     let notImplemented() = 
         raise (NotImplementedException())
         Unchecked.defaultof<_>
+
+    let runtimeGetUncheckedDefault (t : Type) =
+        if t.IsValueType && Nullable.GetUnderlyingType t |> isNull then
+            Activator.CreateInstance t
+        else
+            null
+
+    let tryGet key (dict : System.Collections.Generic.IDictionary<_,_>) = 
+        let mutable value = null;
+        match dict.TryGetValue (key, &value) with
+        | true -> Some value
+        | false -> None
