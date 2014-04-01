@@ -171,8 +171,14 @@
 
             let private (|PropertyComparison|_|) (expr : Expr) =
                 match expr with
-                | ComparisonOp (op, PropertyGet (Some (Var(v)), prop, []), valExpr) -> Some (PropertyComparison (v, prop, op, valExpr))
-                | ComparisonOp (op, valExpr, PropertyGet (Some (Var(v)), prop, [])) -> Some (PropertyComparison (v, prop, op.CommutativeInvert(), valExpr))
+                | ComparisonOp (op, PropertyGet (Some (Var(v)), prop, []), valExpr) -> 
+                    Some (PropertyComparison (v, prop, op, valExpr))
+                | ComparisonOp (op, valExpr, PropertyGet (Some (Var(v)), prop, [])) -> 
+                    Some (PropertyComparison (v, prop, op.CommutativeInvert(), valExpr))
+                | PropertyGet (Some (Var(v)), prop, []) when prop.PropertyType = typeof<bool> -> 
+                    Some (PropertyComparison (v, prop, Equals, Expr.Value(true)))
+                | SpecificCall <@ not @> (_, _, [ PropertyGet (Some (Var(v)), prop, []) ]) when prop.PropertyType = typeof<bool> -> 
+                    Some (PropertyComparison (v, prop, Equals, Expr.Value(false)))
                 | _ -> None
 
             let private (|VarComparison|_|) (expr : Expr) =

@@ -387,6 +387,27 @@ module TableStorageTests =
             query.TakeCount.IsNone |> should equal true
 
         [<Fact>]
+        let ``where query allows bool properties to be treated as comparison against true`` () = 
+            let query = Query.all<Game> |> Query.where <@ fun g -> g.HasMultiplayer @>
+
+            query.Filter |> should equal "HasMultiplayer eq true"
+            query.TakeCount.IsNone |> should equal true
+
+        [<Fact>]
+        let ``where query allows notted bool properties to be treated as comparison against false`` () = 
+            let query = Query.all<Game> |> Query.where <@ fun g -> not g.HasMultiplayer @>
+
+            query.Filter |> should equal "HasMultiplayer eq false"
+            query.TakeCount.IsNone |> should equal true
+
+        [<Fact>]
+        let ``where query allows bool properties to be combined with other comparisons`` () = 
+            let query = Query.all<Game> |> Query.where <@ fun g -> g.HasMultiplayer || g.Developer = "Valve" @>
+
+            query.Filter |> should equal "(HasMultiplayer eq true) OR (Developer eq 'Valve')"
+            query.TakeCount.IsNone |> should equal true
+
+        [<Fact>]
         let ``multiple where queries are anded together`` () = 
             let query = 
                 Query.all<Game> 
