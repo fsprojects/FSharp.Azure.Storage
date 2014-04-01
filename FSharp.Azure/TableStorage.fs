@@ -123,7 +123,7 @@
                     | l, r -> TableQuery.CombineFilters (left.Filter, "AND", right.Filter)
                 let takeCount = 
                     match left.TakeCount, right.TakeCount with
-                    | Some l, Some r -> Some (max l r)
+                    | Some l, Some r -> Some (min l r)
                     | Some l, None -> Some l
                     | None, Some r -> Some r
                     | None, None -> None
@@ -141,6 +141,14 @@
                 | LessThan
                 | LessThanOrEqual
                 | NotEqual
+                member this.CommutativeInvert() = 
+                    match this with
+                    | GreaterThan -> LessThan
+                    | GreaterThanOrEqual -> LessThanOrEqual
+                    | LessThan -> GreaterThan
+                    | LessThanOrEqual -> GreaterThanOrEqual
+                    | Equals -> Equals
+                    | NotEqual -> NotEqual
             
             let private toOperator comparison = 
                 match comparison with
@@ -164,7 +172,13 @@
             let private (|PropertyComparison|_|) (expr : Expr) =
                 match expr with
                 | ComparisonOp (op, PropertyGet (Some (Var(v)), prop, []), valExpr) -> Some (PropertyComparison (v, prop, op, valExpr))
-                | ComparisonOp (op, valExpr, PropertyGet (Some (Var(v)), prop, [])) -> Some (PropertyComparison (v, prop, op, valExpr))
+                | ComparisonOp (op, valExpr, PropertyGet (Some (Var(v)), prop, [])) -> Some (PropertyComparison (v, prop, op.CommutativeInvert(), valExpr))
+                | _ -> None
+
+            let private (|VarComparison|_|) (expr : Expr) =
+                match expr with
+                | ComparisonOp (op, Var(v), valExpr) -> Some (VarComparison (v, op, valExpr))
+                | ComparisonOp (op, valExpr, Var(v)) -> Some (VarComparison (v, op.CommutativeInvert(), valExpr))
                 | _ -> None
 
             let private (|ComparisonValue|_|) (expr : Expr) =
@@ -173,53 +187,75 @@
                 | expr when expr.GetFreeVars().Any() -> failwithf "Cannot evaluate %A to a comparison value as it contains free variables" expr
                 | expr -> Some(ComparisonValue (expr.EvalUntyped()))
 
-            let private buildFilter param expr =
-                let rec buildFilterRec expr = 
+            let private generateFilterCondition type' propertyName op (value : obj) = 
+               match type' with
+                | t when t = typeof<string> -> TableQuery.GenerateFilterCondition (propertyName, op |> toOperator, value :?> string)
+                | t when t = typeof<byte[]> -> TableQuery.GenerateFilterConditionForBinary (propertyName, op |> toOperator, value :?> byte[])
+                | t when t = typeof<bool> -> TableQuery.GenerateFilterConditionForBool (propertyName, op |> toOperator, value :?> bool)
+                | t when t = typeof<DateTimeOffset> -> TableQuery.GenerateFilterConditionForDate (propertyName, op |> toOperator, value :?> DateTimeOffset)
+                | t when t = typeof<double> -> TableQuery.GenerateFilterConditionForDouble (propertyName, op |> toOperator, value :?> double)
+                | t when t = typeof<Guid> -> TableQuery.GenerateFilterConditionForGuid (propertyName, op |> toOperator, value :?> Guid)
+                | t when t = typeof<int> -> TableQuery.GenerateFilterConditionForInt (propertyName, op |> toOperator, value :?> int)
+                | t when t = typeof<int64> -> TableQuery.GenerateFilterConditionForLong (propertyName, op |> toOperator, value :?> int64)
+                | t -> failwithf "Unexpected property type %s for property %s" t.Name propertyName
+
+            let private buildPropertyFilter param expr =
+                let rec buildPropertyFilterRec expr = 
                     match expr with
                     | AndAlso (left, right) -> 
-                        TableQuery.CombineFilters(buildFilterRec left, "AND", buildFilterRec right)
+                        TableQuery.CombineFilters(buildPropertyFilterRec left, "AND", buildPropertyFilterRec right)
                     | OrElse (left, right) -> 
-                        TableQuery.CombineFilters(buildFilterRec left, "OR", buildFilterRec right)
+                        TableQuery.CombineFilters(buildPropertyFilterRec left, "OR", buildPropertyFilterRec right)
                     | PropertyComparison (v, prop, op, ComparisonValue (value)) ->
                         if v <> param then
                             failwithf "Comparison (%A) to property (%s) on value that is not the function parameter (%s)" op prop.Name v.Name
-                        match prop.PropertyType with
-                        | t when t = typeof<string> -> TableQuery.GenerateFilterCondition (prop.Name, op |> toOperator, value :?> string)
-                        | t when t = typeof<byte[]> -> TableQuery.GenerateFilterConditionForBinary (prop.Name, op |> toOperator, value :?> byte[])
-                        | t when t = typeof<bool> -> TableQuery.GenerateFilterConditionForBool (prop.Name, op |> toOperator, value :?> bool)
-                        | t when t = typeof<DateTimeOffset> -> TableQuery.GenerateFilterConditionForDate (prop.Name, op |> toOperator, value :?> DateTimeOffset)
-                        | t when t = typeof<double> -> TableQuery.GenerateFilterConditionForDouble (prop.Name, op |> toOperator, value :?> double)
-                        | t when t = typeof<Guid> -> TableQuery.GenerateFilterConditionForGuid (prop.Name, op |> toOperator, value :?> Guid)
-                        | t when t = typeof<int> -> TableQuery.GenerateFilterConditionForInt (prop.Name, op |> toOperator, value :?> int)
-                        | t when t = typeof<int64> -> TableQuery.GenerateFilterConditionForLong (prop.Name, op |> toOperator, value :?> int64)
-                        | t -> failwithf "Unexpected property type %s on property %s" t.Name prop.Name
+                        generateFilterCondition prop.PropertyType prop.Name op value
                     | _ -> failwithf "Unable to understand expression: %A" expr
-                buildFilterRec expr
+                buildPropertyFilterRec expr
 
+            let private buildVarFilter propertyName param expr =
+                let rec buildVarFilterRec expr = 
+                    match expr with
+                    | AndAlso (left, right) -> 
+                        TableQuery.CombineFilters(buildVarFilterRec left, "AND", buildVarFilterRec right)
+                    | OrElse (left, right) -> 
+                        TableQuery.CombineFilters(buildVarFilterRec left, "OR", buildVarFilterRec right)
+                    | VarComparison (v, op, ComparisonValue (value)) ->
+                        if v <> param then
+                            failwithf "Comparison (%A) to value that is not the function parameter (%s)" op v.Name
+                        generateFilterCondition v.Type propertyName op value
+                    | _ -> failwithf "Unable to understand expression: %A" expr
+                buildVarFilterRec expr
 
-            let private makeFilter (expr : Expr<'T -> bool>) =
+            let private makePropertyFilter (expr : Expr<'T -> bool>) =
                 if expr.GetFreeVars().Any() then
                     failwithf "The expression %A contains free variables." expr
                 match expr with
-                | Lambda (param, expr) -> buildFilter param expr
+                | Lambda (param, expr) -> buildPropertyFilter param expr
                 | _ -> failwith "Unexpected expression; lambda not found"
+
+            let private makeVarFilter propertyName (expr : Expr<'T -> bool>) =
+                if expr.GetFreeVars().Any() then
+                    failwithf "The expression %A contains free variables." expr
+                match expr with
+                | Lambda (param, expr) -> buildVarFilter propertyName param expr
+                | _ -> failwith "Unexpected expression; lambda not found"
+
+
 
             let all<'T> : EntityQuery<'T> = EntityQuery.get_Zero()
 
             let where (expr : Expr<'T -> bool>) (query : EntityQuery<'T>) = 
-                [query; { Filter = makeFilter expr; TakeCount = None };] |> List.reduce (+)
+                [query; { Filter = expr |> makePropertyFilter; TakeCount = None };] |> List.reduce (+)
 
             let wherePk (expr : Expr<string -> bool>) (query : EntityQuery<'T>) = 
-                notImplemented() //TODO
-                query
+                [query; { Filter = expr |> makeVarFilter "PartitionKey"; TakeCount = None };] |> List.reduce (+)
 
             let whereRk (expr : Expr<string -> bool>) (query : EntityQuery<'T>) = 
-                notImplemented() //TODO
-                query
+                [query; { Filter = expr |> makeVarFilter "RowKey"; TakeCount = None };] |> List.reduce (+)
 
             let whereTimestamp (expr : Expr<DateTimeOffset -> bool>) (query : EntityQuery<'T>) = 
-                notImplemented() //TODO
-                query
+                [query; { Filter = expr |> makeVarFilter "Timestamp"; TakeCount = None };] |> List.reduce (+)
 
             let take count (query : EntityQuery<'T>) =
                 [query; { Filter = ""; TakeCount = Some count };] |> List.reduce (+)
