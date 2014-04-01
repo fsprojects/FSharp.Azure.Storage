@@ -408,6 +408,20 @@ module TableStorageTests =
             query.TakeCount.IsNone |> should equal true
 
         [<Fact>]
+        let ``where query allows not to be used against property comparison`` () = 
+            let query = Query.all<Game> |> Query.where <@ fun g -> not (g.Developer = "Valve") @>
+
+            query.Filter |> should equal "NOT (Developer eq 'Valve')"
+            query.TakeCount.IsNone |> should equal true
+
+        [<Fact>]
+        let ``where query allows not to be used against boolean expressions`` () = 
+            let query = Query.all<Game> |> Query.where <@ fun g -> not (g.Developer = "Valve" && g.Name = "Portal") @>
+
+            query.Filter |> should equal "NOT ((Developer eq 'Valve') AND (Name eq 'Portal'))"
+            query.TakeCount.IsNone |> should equal true
+
+        [<Fact>]
         let ``multiple where queries are anded together`` () = 
             let query = 
                 Query.all<Game> 
@@ -432,6 +446,13 @@ module TableStorageTests =
             query.TakeCount.IsNone |> should equal true
 
         [<Fact>]
+        let ``partition key where query notted comparison`` () = 
+            let query = Query.all<Game> |> Query.wherePk <@ (fun pk -> not (pk = "Valve")) @>
+
+            query.Filter |> should equal "NOT (PartitionKey eq 'Valve')"
+            query.TakeCount.IsNone |> should equal true
+
+        [<Fact>]
         let ``row key where query comparison`` () = 
             let query = Query.all<Game> |> Query.whereRk <@ (fun rk -> rk <> "PS4") @>
 
@@ -443,6 +464,13 @@ module TableStorageTests =
             let query = Query.all<Game> |> Query.whereRk <@ (fun rk -> "PS4" <> rk) @>
 
             query.Filter |> should equal "RowKey ne 'PS4'"
+            query.TakeCount.IsNone |> should equal true
+
+        [<Fact>]
+        let ``row key where query notted comparison`` () = 
+            let query = Query.all<Game> |> Query.whereRk <@ (fun rk -> not (rk = "PS4")) @>
+
+            query.Filter |> should equal "NOT (RowKey eq 'PS4')"
             query.TakeCount.IsNone |> should equal true
 
         [<Fact>]
@@ -459,6 +487,14 @@ module TableStorageTests =
             let query = Query.all<Game> |> Query.whereTimestamp <@ (fun t -> datetime < t) @>
 
             query.Filter |> should equal "Timestamp gt datetime'2014-04-01T01:00:00.0000000Z'"
+            query.TakeCount.IsNone |> should equal true
+
+        [<Fact>]
+        let ``timestamp where query notted comparison`` () = 
+            let datetime = DateTimeOffset(2014, 4, 1, 12, 0, 0, TimeSpan.FromHours(11.0))
+            let query = Query.all<Game> |> Query.whereTimestamp <@ (fun t -> not (t > datetime)) @>
+
+            query.Filter |> should equal "NOT (Timestamp gt datetime'2014-04-01T01:00:00.0000000Z')"
             query.TakeCount.IsNone |> should equal true
 
         [<Fact>]

@@ -159,6 +159,9 @@
                 | LessThanOrEqual -> QueryComparisons.LessThanOrEqual
                 | NotEqual -> QueryComparisons.NotEqual
 
+            let private notFilter filter =
+                sprintf "NOT (%s)" filter
+
             let private (|ComparisonOp|_|) (expr : Expr) =
                 match expr with
                 | SpecificCall <@ (=) @> (_, _, [left; right]) -> Some (ComparisonOp Equals, left, right)
@@ -177,14 +180,16 @@
                     Some (PropertyComparison (v, prop, op.CommutativeInvert(), valExpr))
                 | PropertyGet (Some (Var(v)), prop, []) when prop.PropertyType = typeof<bool> -> 
                     Some (PropertyComparison (v, prop, Equals, Expr.Value(true)))
-                | SpecificCall <@ not @> (_, _, [ PropertyGet (Some (Var(v)), prop, []) ]) when prop.PropertyType = typeof<bool> -> 
+                | SpecificCall <@ not @> (None, _, [ PropertyGet (Some (Var(v)), prop, []) ]) when prop.PropertyType = typeof<bool> -> 
                     Some (PropertyComparison (v, prop, Equals, Expr.Value(false)))
                 | _ -> None
 
             let private (|VarComparison|_|) (expr : Expr) =
                 match expr with
-                | ComparisonOp (op, Var(v), valExpr) -> Some (VarComparison (v, op, valExpr))
-                | ComparisonOp (op, valExpr, Var(v)) -> Some (VarComparison (v, op.CommutativeInvert(), valExpr))
+                | ComparisonOp (op, Var(v), valExpr) -> 
+                    Some (VarComparison (v, op, valExpr))
+                | ComparisonOp (op, valExpr, Var(v)) -> 
+                    Some (VarComparison (v, op.CommutativeInvert(), valExpr))
                 | _ -> None
 
             let private (|ComparisonValue|_|) (expr : Expr) =
@@ -205,6 +210,11 @@
                 | t when t = typeof<int64> -> TableQuery.GenerateFilterConditionForLong (propertyName, op |> toOperator, value :?> int64)
                 | t -> failwithf "Unexpected property type %s for property %s" t.Name propertyName
 
+            let private isPropertyComparisonAgainstBool expr =
+                match expr with
+                | PropertyComparison (_, prop, _, _) when prop.PropertyType = typeof<bool> -> true
+                | _ -> false
+
             let private buildPropertyFilter param expr =
                 let rec buildPropertyFilterRec expr = 
                     match expr with
@@ -212,6 +222,8 @@
                         TableQuery.CombineFilters(buildPropertyFilterRec left, "AND", buildPropertyFilterRec right)
                     | OrElse (left, right) -> 
                         TableQuery.CombineFilters(buildPropertyFilterRec left, "OR", buildPropertyFilterRec right)
+                    | SpecificCall <@ not @> (None, _, [nottedExpr]) when not (nottedExpr |> isPropertyComparisonAgainstBool) -> 
+                        notFilter (buildPropertyFilterRec nottedExpr)
                     | PropertyComparison (v, prop, op, ComparisonValue (value)) ->
                         if v <> param then
                             failwithf "Comparison (%A) to property (%s) on value that is not the function parameter (%s)" op prop.Name v.Name
@@ -226,6 +238,8 @@
                         TableQuery.CombineFilters(buildVarFilterRec left, "AND", buildVarFilterRec right)
                     | OrElse (left, right) -> 
                         TableQuery.CombineFilters(buildVarFilterRec left, "OR", buildVarFilterRec right)
+                    | SpecificCall <@ not @> (None, _, [nottedExpr]) -> 
+                        notFilter (buildVarFilterRec nottedExpr)
                     | VarComparison (v, op, ComparisonValue (value)) ->
                         if v <> param then
                             failwithf "Comparison (%A) to value that is not the function parameter (%s)" op v.Name
