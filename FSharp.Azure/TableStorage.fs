@@ -161,12 +161,12 @@
 
             let private (|ComparisonOp|_|) (expr : Expr) =
                 match expr with
-                | SpecificCall <@ (=) @> (expr, _, [left; right]) -> Some (ComparisonOp Equals, left, right)
-                | SpecificCall <@ (>) @> (expr, _, [left; right]) -> Some (ComparisonOp GreaterThan, left, right)
-                | SpecificCall <@ (>=) @> (expr, _, [left; right]) -> Some (ComparisonOp GreaterThanOrEqual, left, right)
-                | SpecificCall <@ (<) @> (expr, _, [left; right]) -> Some (ComparisonOp LessThan, left, right)
-                | SpecificCall <@ (<=) @> (expr, _, [left; right]) -> Some (ComparisonOp LessThanOrEqual, left, right)
-                | SpecificCall <@ (<>) @> (expr, _, [left; right]) -> Some (ComparisonOp NotEqual, left, right)
+                | SpecificCall <@ (=) @> (_, _, [left; right]) -> Some (ComparisonOp Equals, left, right)
+                | SpecificCall <@ (>) @> (_, _, [left; right]) -> Some (ComparisonOp GreaterThan, left, right)
+                | SpecificCall <@ (>=) @> (_, _, [left; right]) -> Some (ComparisonOp GreaterThanOrEqual, left, right)
+                | SpecificCall <@ (<) @> (_, _, [left; right]) -> Some (ComparisonOp LessThan, left, right)
+                | SpecificCall <@ (<=) @> (_, _, [left; right]) -> Some (ComparisonOp LessThanOrEqual, left, right)
+                | SpecificCall <@ (<>) @> (_, _, [left; right]) -> Some (ComparisonOp NotEqual, left, right)
                 | _ -> None
 
             let private (|PropertyComparison|_|) (expr : Expr) =
