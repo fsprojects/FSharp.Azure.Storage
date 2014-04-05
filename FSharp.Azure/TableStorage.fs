@@ -129,6 +129,9 @@
                     | None, None -> None
 
                 { Filter = filter; TakeCount = takeCount }
+
+            member this.ToTableQuery() = 
+                TableQuery (FilterString = this.Filter, TakeCount = (this.TakeCount |> toNullable))
                 
 
         module Query = 
@@ -308,3 +311,34 @@
                 return { HttpStatusCode = result.HttpStatusCode; Etag = result.Etag }
             }
             
+        let fromTable (client: CloudTableClient) name (query : EntityQuery<'T>) =
+            let table = client.GetTableReference name
+            let tableQuery = query.ToTableQuery()
+            table.ExecuteQuery<'T * EntityMetadata>(tableQuery, RecordTableEntityWrapper.ResolveEntity)
+
+        let fromTableSegmented (client: CloudTableClient) name (query : EntityQuery<'T>) continuationToken =
+            let table = client.GetTableReference name
+            let tableQuery = query.ToTableQuery()
+            let result = table.ExecuteQuerySegmented<'T * EntityMetadata>(tableQuery, RecordTableEntityWrapper.ResolveEntity, continuationToken |> toNullRef)
+            result.Results, result.ContinuationToken |> toOption
+
+        let fromTableSegmentedAsync (client: CloudTableClient) name (query : EntityQuery<'T>) continuationToken =
+            let table = client.GetTableReference name
+            let tableQuery = query.ToTableQuery()
+            async {
+                let! result = table.ExecuteQuerySegmentedAsync<'T * EntityMetadata>(tableQuery, RecordTableEntityWrapper.ResolveEntity, continuationToken |> toNullRef) |> Async.AwaitTask
+                return result.Results, result.ContinuationToken |> toOption
+            }
+
+        let fromTableAsync (client: CloudTableClient) name (query : EntityQuery<'T>) =
+            let rec getSegmentAsync resultsList continutationToken =
+                async {
+                    let! result, furtherContinuation = fromTableSegmentedAsync client name query continutationToken
+                    match furtherContinuation with
+                    | Some _ -> return! getSegmentAsync (result :: resultsList) furtherContinuation
+                    | None -> return result :: resultsList
+                }
+            async {
+                let! resultsList = getSegmentAsync [] None
+                return resultsList |> List.rev |> Seq.concat
+            }

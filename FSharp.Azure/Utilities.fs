@@ -5,8 +5,10 @@ open System;
 module private Utilities =
     open Microsoft.FSharp.Reflection
     
-    let inline (|?) lhs rhs = (if lhs = null then rhs else lhs)
-
+    let inline (|?) (lhs: 'a option) rhs = (if lhs.IsSome then lhs.Value else rhs)
+    let inline toNullable (opt: 'a option) = if opt.IsSome then Nullable(opt.Value) else Nullable()
+    let inline toNullRef (opt: 'a option) = if opt.IsSome then opt.Value else null
+    let inline toOption o = match o with | null -> None | _ -> Some(o)
     let inline isNull o = match o with | null -> true | _ -> false
     let inline isNotNull o = match o with | null -> false | _ -> true
 
