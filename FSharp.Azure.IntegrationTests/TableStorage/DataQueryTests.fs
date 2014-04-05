@@ -69,8 +69,7 @@ module DataQuery =
         let ``query by specific instance``() = 
             let halo4 = 
                 Query.all<Game> 
-                |> Query.wherePk <@ fun pk -> pk = "343 Studios" @> 
-                |> Query.whereRk <@ fun rk -> rk = "Halo 4-Xbox 360" @>
+                |> Query.where <@ fun g s -> s.PartitionKey = "343 Studios" && s.RowKey = "Halo 4-Xbox 360" @> 
                 |> fromTable gameTableName
                 |> Seq.toArray
             
@@ -83,7 +82,7 @@ module DataQuery =
         [<Fact>]
         let ``query by partition key``() =
             let valveGames = 
-                Query.all<Game> |> Query.wherePk <@ fun pk -> pk = "Valve" @> |> fromTable gameTableName |> Seq.toArray
+                Query.all<Game> |> Query.where <@ fun g s -> s.PartitionKey = "Valve" @> |> fromTable gameTableName |> Seq.toArray
             
             valveGames |> verifyGames [|
                 { Developer = "Valve"; Name = "Half-Life 2"; Platform = "PC"; HasMultiplayer = true }
@@ -97,7 +96,7 @@ module DataQuery =
         let ``query by properties``() =
             let valveGames = 
                 Query.all<Game> 
-                |> Query.where <@ fun g -> (g.Platform = "Xbox 360" || g.Platform = "PC") && not (g.Developer = "Bungie") @> 
+                |> Query.where <@ fun g s -> (g.Platform = "Xbox 360" || g.Platform = "PC") && not (g.Developer = "Bungie") @> 
                 |> fromTable gameTableName 
                 |> Seq.toArray
             
@@ -116,7 +115,7 @@ module DataQuery =
         let ``query with take``() =
             let valveGames = 
                 Query.all<Game> 
-                |> Query.wherePk <@ fun pk -> pk = "Valve" @> 
+                |> Query.where <@ fun g s -> s.PartitionKey = "Valve" @> 
                 |> Query.take 2
                 |> fromTable gameTableName 
                 |> Seq.toArray

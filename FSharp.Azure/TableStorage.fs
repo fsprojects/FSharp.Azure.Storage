@@ -137,6 +137,11 @@
         module Query = 
             open DerivedPatterns
 
+            type SystemProperties =
+                { PartitionKey : string
+                  RowKey : string
+                  Timestamp : DateTimeOffset }
+
             type private Comparison =
                 | Equals
                 | GreaterThan
@@ -187,14 +192,6 @@
                     Some (PropertyComparison (v, prop, Equals, Expr.Value(false)))
                 | _ -> None
 
-            let private (|VarComparison|_|) (expr : Expr) =
-                match expr with
-                | ComparisonOp (op, Var(v), valExpr) -> 
-                    Some (VarComparison (v, op, valExpr))
-                | ComparisonOp (op, valExpr, Var(v)) -> 
-                    Some (VarComparison (v, op.CommutativeInvert(), valExpr))
-                | _ -> None
-
             let private (|ComparisonValue|_|) (expr : Expr) =
                 match expr with
                 | Value (o, t) -> Some(ComparisonValue (o))
@@ -218,7 +215,7 @@
                 | PropertyComparison (_, prop, _, _) when prop.PropertyType = typeof<bool> -> true
                 | _ -> false
 
-            let private buildPropertyFilter param expr =
+            let private buildPropertyFilter entityVar sysPropVar expr =
                 let rec buildPropertyFilterRec expr = 
                     match expr with
                     | AndAlso (left, right) -> 
@@ -228,57 +225,24 @@
                     | SpecificCall <@ not @> (None, _, [nottedExpr]) when not (nottedExpr |> isPropertyComparisonAgainstBool) -> 
                         notFilter (buildPropertyFilterRec nottedExpr)
                     | PropertyComparison (v, prop, op, ComparisonValue (value)) ->
-                        if v <> param then
+                        if v <> entityVar && v <> sysPropVar then
                             failwithf "Comparison (%A) to property (%s) on value that is not the function parameter (%s)" op prop.Name v.Name
                         generateFilterCondition prop.PropertyType prop.Name op value
                     | _ -> failwithf "Unable to understand expression: %A" expr
                 buildPropertyFilterRec expr
 
-            let private buildVarFilter propertyName param expr =
-                let rec buildVarFilterRec expr = 
-                    match expr with
-                    | AndAlso (left, right) -> 
-                        TableQuery.CombineFilters(buildVarFilterRec left, "and", buildVarFilterRec right)
-                    | OrElse (left, right) -> 
-                        TableQuery.CombineFilters(buildVarFilterRec left, "or", buildVarFilterRec right)
-                    | SpecificCall <@ not @> (None, _, [nottedExpr]) -> 
-                        notFilter (buildVarFilterRec nottedExpr)
-                    | VarComparison (v, op, ComparisonValue (value)) ->
-                        if v <> param then
-                            failwithf "Comparison (%A) to value that is not the function parameter (%s)" op v.Name
-                        generateFilterCondition v.Type propertyName op value
-                    | _ -> failwithf "Unable to understand expression: %A" expr
-                buildVarFilterRec expr
-
-            let private makePropertyFilter (expr : Expr<'T -> bool>) =
+            let private makePropertyFilter (expr : Expr<'T -> SystemProperties -> bool>) =
                 if expr.GetFreeVars().Any() then
                     failwithf "The expression %A contains free variables." expr
                 match expr with
-                | Lambda (param, expr) -> buildPropertyFilter param expr
+                | Lambda (entityVar, Lambda (sysPropVar, expr)) -> buildPropertyFilter entityVar sysPropVar expr
                 | _ -> failwith "Unexpected expression; lambda not found"
-
-            let private makeVarFilter propertyName (expr : Expr<'T -> bool>) =
-                if expr.GetFreeVars().Any() then
-                    failwithf "The expression %A contains free variables." expr
-                match expr with
-                | Lambda (param, expr) -> buildVarFilter propertyName param expr
-                | _ -> failwith "Unexpected expression; lambda not found"
-
 
 
             let all<'T> : EntityQuery<'T> = EntityQuery.get_Zero()
 
-            let where (expr : Expr<'T -> bool>) (query : EntityQuery<'T>) = 
+            let where (expr : Expr<'T -> SystemProperties -> bool>) (query : EntityQuery<'T>) = 
                 [query; { Filter = expr |> makePropertyFilter; TakeCount = None };] |> List.reduce (+)
-
-            let wherePk (expr : Expr<string -> bool>) (query : EntityQuery<'T>) = 
-                [query; { Filter = expr |> makeVarFilter "PartitionKey"; TakeCount = None };] |> List.reduce (+)
-
-            let whereRk (expr : Expr<string -> bool>) (query : EntityQuery<'T>) = 
-                [query; { Filter = expr |> makeVarFilter "RowKey"; TakeCount = None };] |> List.reduce (+)
-
-            let whereTimestamp (expr : Expr<DateTimeOffset -> bool>) (query : EntityQuery<'T>) = 
-                [query; { Filter = expr |> makeVarFilter "Timestamp"; TakeCount = None };] |> List.reduce (+)
 
             let take count (query : EntityQuery<'T>) =
                 [query; { Filter = ""; TakeCount = Some count };] |> List.reduce (+)
