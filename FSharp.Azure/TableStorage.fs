@@ -120,7 +120,7 @@
                     | "", "" -> ""
                     | l, "" -> l
                     | "", r -> r
-                    | l, r -> TableQuery.CombineFilters (left.Filter, "AND", right.Filter)
+                    | l, r -> TableQuery.CombineFilters (left.Filter, "and", right.Filter)
                 let takeCount = 
                     match left.TakeCount, right.TakeCount with
                     | Some l, Some r -> Some (min l r)
@@ -163,7 +163,7 @@
                 | NotEqual -> QueryComparisons.NotEqual
 
             let private notFilter filter =
-                sprintf "NOT (%s)" filter
+                sprintf "not (%s)" filter
 
             let private (|ComparisonOp|_|) (expr : Expr) =
                 match expr with
@@ -222,9 +222,9 @@
                 let rec buildPropertyFilterRec expr = 
                     match expr with
                     | AndAlso (left, right) -> 
-                        TableQuery.CombineFilters(buildPropertyFilterRec left, "AND", buildPropertyFilterRec right)
+                        TableQuery.CombineFilters(buildPropertyFilterRec left, "and", buildPropertyFilterRec right)
                     | OrElse (left, right) -> 
-                        TableQuery.CombineFilters(buildPropertyFilterRec left, "OR", buildPropertyFilterRec right)
+                        TableQuery.CombineFilters(buildPropertyFilterRec left, "or", buildPropertyFilterRec right)
                     | SpecificCall <@ not @> (None, _, [nottedExpr]) when not (nottedExpr |> isPropertyComparisonAgainstBool) -> 
                         notFilter (buildPropertyFilterRec nottedExpr)
                     | PropertyComparison (v, prop, op, ComparisonValue (value)) ->
@@ -238,9 +238,9 @@
                 let rec buildVarFilterRec expr = 
                     match expr with
                     | AndAlso (left, right) -> 
-                        TableQuery.CombineFilters(buildVarFilterRec left, "AND", buildVarFilterRec right)
+                        TableQuery.CombineFilters(buildVarFilterRec left, "and", buildVarFilterRec right)
                     | OrElse (left, right) -> 
-                        TableQuery.CombineFilters(buildVarFilterRec left, "OR", buildVarFilterRec right)
+                        TableQuery.CombineFilters(buildVarFilterRec left, "or", buildVarFilterRec right)
                     | SpecificCall <@ not @> (None, _, [nottedExpr]) -> 
                         notFilter (buildVarFilterRec nottedExpr)
                     | VarComparison (v, op, ComparisonValue (value)) ->

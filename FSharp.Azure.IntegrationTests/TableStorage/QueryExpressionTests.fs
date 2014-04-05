@@ -69,14 +69,14 @@ module QueryExpression =
         let ``where query with logical and operator`` () = 
             let query = Query.all<Game> |> Query.where <@ fun g -> g.Name = "Half-Life 2" && g.Developer = "Valve" @>
 
-            query.Filter |> should equal "(Name eq 'Half-Life 2') AND (Developer eq 'Valve')"
+            query.Filter |> should equal "(Name eq 'Half-Life 2') and (Developer eq 'Valve')"
             query.TakeCount.IsNone |> should equal true
 
         [<Fact>]
         let ``where query with logical or operator`` () = 
             let query = Query.all<Game> |> Query.where <@ fun g -> g.Name = "Half-Life 2" || g.Developer = "Valve" @>
 
-            query.Filter |> should equal "(Name eq 'Half-Life 2') OR (Developer eq 'Valve')"
+            query.Filter |> should equal "(Name eq 'Half-Life 2') or (Developer eq 'Valve')"
             query.TakeCount.IsNone |> should equal true
 
         [<Fact>]
@@ -85,7 +85,7 @@ module QueryExpression =
                 Query.all<Game> 
                 |> Query.where <@ fun g -> g.Name = "Half-Life 2" || g.Developer = "Crystal Dynamics" && g.Name = "Tomb Raider" @>
 
-            query.Filter |> should equal "(Name eq 'Half-Life 2') OR ((Developer eq 'Crystal Dynamics') AND (Name eq 'Tomb Raider'))"
+            query.Filter |> should equal "(Name eq 'Half-Life 2') or ((Developer eq 'Crystal Dynamics') and (Name eq 'Tomb Raider'))"
             query.TakeCount.IsNone |> should equal true
 
         [<Fact>]
@@ -94,7 +94,7 @@ module QueryExpression =
                 Query.all<Game> 
                 |> Query.where <@ fun g -> (g.Name = "Half-Life 2" || g.Name = "Portal") && g.Developer = "Valve" @>
 
-            query.Filter |> should equal "((Name eq 'Half-Life 2') OR (Name eq 'Portal')) AND (Developer eq 'Valve')"
+            query.Filter |> should equal "((Name eq 'Half-Life 2') or (Name eq 'Portal')) and (Developer eq 'Valve')"
             query.TakeCount.IsNone |> should equal true
 
         [<Fact>]
@@ -173,21 +173,21 @@ module QueryExpression =
         let ``where query allows bool properties to be combined with other comparisons`` () = 
             let query = Query.all<Game> |> Query.where <@ fun g -> g.HasMultiplayer || g.Developer = "Valve" @>
 
-            query.Filter |> should equal "(HasMultiplayer eq true) OR (Developer eq 'Valve')"
+            query.Filter |> should equal "(HasMultiplayer eq true) or (Developer eq 'Valve')"
             query.TakeCount.IsNone |> should equal true
 
         [<Fact>]
         let ``where query allows not to be used against property comparison`` () = 
             let query = Query.all<Game> |> Query.where <@ fun g -> not (g.Developer = "Valve") @>
 
-            query.Filter |> should equal "NOT (Developer eq 'Valve')"
+            query.Filter |> should equal "not (Developer eq 'Valve')"
             query.TakeCount.IsNone |> should equal true
 
         [<Fact>]
         let ``where query allows not to be used against boolean expressions`` () = 
             let query = Query.all<Game> |> Query.where <@ fun g -> not (g.Developer = "Valve" && g.Name = "Portal") @>
 
-            query.Filter |> should equal "NOT ((Developer eq 'Valve') AND (Name eq 'Portal'))"
+            query.Filter |> should equal "not ((Developer eq 'Valve') and (Name eq 'Portal'))"
             query.TakeCount.IsNone |> should equal true
 
         [<Fact>]
@@ -197,7 +197,7 @@ module QueryExpression =
                 |> Query.where <@ fun g -> g.Name = "Halo 4" @>
                 |> Query.where <@ fun g -> g.Developer = "343 Studios" @>
 
-            query.Filter |> should equal "(Name eq 'Halo 4') AND (Developer eq '343 Studios')"
+            query.Filter |> should equal "(Name eq 'Halo 4') and (Developer eq '343 Studios')"
             query.TakeCount.IsNone |> should equal true
 
         [<Fact>]
@@ -218,7 +218,7 @@ module QueryExpression =
         let ``partition key where query notted comparison`` () = 
             let query = Query.all<Game> |> Query.wherePk <@ (fun pk -> not (pk = "Valve")) @>
 
-            query.Filter |> should equal "NOT (PartitionKey eq 'Valve')"
+            query.Filter |> should equal "not (PartitionKey eq 'Valve')"
             query.TakeCount.IsNone |> should equal true
 
         [<Fact>]
@@ -239,7 +239,7 @@ module QueryExpression =
         let ``row key where query notted comparison`` () = 
             let query = Query.all<Game> |> Query.whereRk <@ (fun rk -> not (rk = "PS4")) @>
 
-            query.Filter |> should equal "NOT (RowKey eq 'PS4')"
+            query.Filter |> should equal "not (RowKey eq 'PS4')"
             query.TakeCount.IsNone |> should equal true
 
         [<Fact>]
@@ -263,7 +263,7 @@ module QueryExpression =
             let datetime = DateTimeOffset(2014, 4, 1, 12, 0, 0, TimeSpan.FromHours(11.0))
             let query = Query.all<Game> |> Query.whereTimestamp <@ (fun t -> not (t > datetime)) @>
 
-            query.Filter |> should equal "NOT (Timestamp gt datetime'2014-04-01T01:00:00.0000000Z')"
+            query.Filter |> should equal "not (Timestamp gt datetime'2014-04-01T01:00:00.0000000Z')"
             query.TakeCount.IsNone |> should equal true
 
         [<Fact>]
@@ -278,7 +278,7 @@ module QueryExpression =
                 |> Query.whereTimestamp <@ fun t -> t < datetime @>
                 
 
-            query.Filter |> should equal "(((PartitionKey eq 'Bungie') AND (RowKey eq 'Xbox 360')) AND ((Name ge 'Halo') AND (Name lt 'I'))) AND (Timestamp lt datetime'2014-04-01T01:00:00.0000000Z')"
+            query.Filter |> should equal "(((PartitionKey eq 'Bungie') and (RowKey eq 'Xbox 360')) and ((Name ge 'Halo') and (Name lt 'I'))) and (Timestamp lt datetime'2014-04-01T01:00:00.0000000Z')"
             query.TakeCount.IsNone |> should equal true
 
         [<Fact>]
