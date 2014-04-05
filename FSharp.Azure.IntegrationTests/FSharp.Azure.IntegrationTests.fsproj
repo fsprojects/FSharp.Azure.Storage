@@ -96,7 +96,8 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="TableStorageTests.fs" />
+    <Compile Include="TableStorage\DataModificationTests.fs" />
+    <Compile Include="TableStorage\QueryExpressionTests.fs" />
     <None Include="Script.fsx" />
     <None Include="packages.config" />
     <None Include="app.config" />
