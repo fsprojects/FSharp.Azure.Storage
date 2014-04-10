@@ -280,13 +280,13 @@
             let tableQuery = query.ToTableQuery()
             table.ExecuteQuery<'T * EntityMetadata>(tableQuery, RecordTableEntityWrapper.ResolveEntity)
 
-        let fromTableSegmented (client: CloudTableClient) name (query : EntityQuery<'T>) continuationToken =
+        let fromTableSegmented (client: CloudTableClient) name continuationToken (query : EntityQuery<'T>) =
             let table = client.GetTableReference name
             let tableQuery = query.ToTableQuery()
             let result = table.ExecuteQuerySegmented<'T * EntityMetadata>(tableQuery, RecordTableEntityWrapper.ResolveEntity, continuationToken |> toNullRef)
             result.Results, result.ContinuationToken |> toOption
 
-        let fromTableSegmentedAsync (client: CloudTableClient) name (query : EntityQuery<'T>) continuationToken =
+        let fromTableSegmentedAsync (client: CloudTableClient) name continuationToken (query : EntityQuery<'T>) =
             let table = client.GetTableReference name
             let tableQuery = query.ToTableQuery()
             async {
@@ -295,14 +295,14 @@
             }
 
         let fromTableAsync (client: CloudTableClient) name (query : EntityQuery<'T>) =
-            let rec getSegmentAsync resultsList continutationToken =
+            let rec getSegmentAsync continutationToken resultsList =
                 async {
-                    let! result, furtherContinuation = fromTableSegmentedAsync client name query continutationToken
+                    let! result, furtherContinuation = query |> fromTableSegmentedAsync client name continutationToken
                     match furtherContinuation with
-                    | Some _ -> return! getSegmentAsync (result :: resultsList) furtherContinuation
+                    | Some _ -> return! result :: resultsList |> getSegmentAsync furtherContinuation
                     | None -> return result :: resultsList
                 }
             async {
-                let! resultsList = getSegmentAsync [] None
+                let! resultsList = getSegmentAsync None []
                 return resultsList |> List.rev |> Seq.concat
             }
