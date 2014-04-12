@@ -28,6 +28,16 @@ module DataModification =
           [<RowKey>] RowKey : string; 
           Timestamp : DateTimeOffset }
 
+    type GameTableEntity() = 
+        inherit Microsoft.WindowsAzure.Storage.Table.TableEntity()
+        member val Name : string = null with get,set
+        member val Platform : string = null with get,set
+        member val Developer : string = null with get,set
+        member val HasMultiplayer : bool = false with get,set
+
+    type NonTableEntityClass() =
+        member val Name : string = null with get,set
+
     type Tests() = 
     
         let account = CloudStorageAccount.Parse "UseDevelopmentStorage=true;"
@@ -51,6 +61,18 @@ module DataModification =
             entity.Properties.["Platform"].StringValue |> should equal game.Platform
             entity.Properties.["Developer"].StringValue |> should equal game.Developer
             entity.Properties.["HasMultiplayer"].BooleanValue |> should equal game.HasMultiplayer
+
+        let verifyGameTableEntity (game : GameTableEntity) =
+            let result = TableOperation.Retrieve(game.Developer, game.Name) |> gameTable.Execute
+            let entity = result.Result :?> DynamicTableEntity
+        
+            entity.PartitionKey |> should equal game.Developer
+            entity.RowKey |> should equal game.Name
+            entity.Properties.["Name"].StringValue |> should equal game.Name
+            entity.Properties.["Platform"].StringValue |> should equal game.Platform
+            entity.Properties.["Developer"].StringValue |> should equal game.Developer
+            entity.Properties.["HasMultiplayer"].BooleanValue |> should equal game.HasMultiplayer
+
 
         [<Fact>]
         let ``can insert a new record`` () =
@@ -259,3 +281,46 @@ module DataModification =
             let result = record |> insert |> inTable gameTableName
 
             result.HttpStatusCode |> should equal 204
+
+
+        [<Fact>]
+        let ``can insert a new table entity`` () =
+            let game = 
+                GameTableEntity (Name = "Halo 4", 
+                                 Platform = "Xbox 360", 
+                                 Developer = "343 Industries",
+                                 HasMultiplayer = true,
+                                 PartitionKey = "343 Industries",
+                                 RowKey = "Halo 4")
+
+            let result = game |> insert |> inTable gameTableName
+
+            result.HttpStatusCode |> should equal 204
+            verifyGameTableEntity game
+
+
+        [<Fact>]
+        let ``can replace a table entity`` () =
+            let game = 
+                GameTableEntity (Name = "Halo 4", 
+                                 Platform = "Xbox 360", 
+                                 Developer = "343 Industries",
+                                 HasMultiplayer = true,
+                                 PartitionKey = "343 Industries",
+                                 RowKey = "Halo 4")
+
+            let originalResult = game |> insert |> inTable gameTableName
+
+            do game.Platform <- "PC"
+            do game.HasMultiplayer <- false
+            do game.ETag <- null //This is to prove that replace will respect the etag you pass to it (below)
+
+            let result = (game, originalResult.Etag) |> replace |> inTable gameTableName
+            result.HttpStatusCode |> should equal 204
+            verifyGameTableEntity game
+
+
+        [<Fact>]
+        let ``inserting with types that aren't records or implement ITableEntity fails``() = 
+            (fun () -> Query.all<NonTableEntityClass> |> fromTable tableClient gameTableName |> ignore)
+                |> should throw typeof<Exception>

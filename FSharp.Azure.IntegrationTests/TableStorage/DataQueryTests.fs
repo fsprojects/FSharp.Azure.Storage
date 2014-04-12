@@ -25,6 +25,36 @@ module DataQuery =
           Timestamp : DateTimeOffset }
 
     type Simple = { [<PartitionKey>] PK : string; [<RowKey>] RK : string }
+    
+    type NonTableEntityClass() =
+        member val Name : string = null with get,set
+
+    type GameTableEntity() = 
+        inherit Microsoft.WindowsAzure.Storage.Table.TableEntity()
+        member val Name : string = null with get,set
+        member val Platform : string = null with get,set
+        member val Developer : string = null with get,set
+        member val HasMultiplayer : bool = false with get,set
+
+        override this.Equals other = 
+            match other with
+            | :? Game as game ->
+                this.Name = game.Name && this.Platform = game.Platform && 
+                this.Developer = game.Developer && this.HasMultiplayer = game.HasMultiplayer
+            | :? GameTableEntity as game ->
+                this.Name = game.Name && this.Platform = game.Platform && 
+                this.Developer = game.Developer && this.HasMultiplayer = game.HasMultiplayer &&
+                this.PartitionKey = game.PartitionKey && this.RowKey = game.RowKey &&
+                this.Timestamp = game.Timestamp && this.ETag = game.ETag
+            | _ -> false
+
+        override this.GetHashCode() = 
+            [box this.Name; box this.Platform; box this.Developer
+             box this.HasMultiplayer; box this.PartitionKey; 
+             box this.RowKey; box this.Timestamp; box this.HasMultiplayer ] 
+                |> Seq.choose (fun o -> match o with | null -> None | o -> Some (o.GetHashCode()))
+                |> Seq.reduce (^^^)
+
 
     type Tests() = 
         let account = CloudStorageAccount.Parse "UseDevelopmentStorage=true;"
@@ -74,7 +104,7 @@ module DataQuery =
         let verifyRecords expected actual = 
             actual |> Array.length |> should equal (expected |> Array.length)
             let actual = actual |> Seq.map fst
-            expected |> Seq.iter (fun e -> actual |> should contain e)
+            actual |> Seq.iter (fun a -> expected |> Seq.exists (fun e -> a.Equals(e)) |> should equal true)
 
 
 
@@ -238,3 +268,31 @@ module DataQuery =
             valveGames |> Array.iter (fun (g, _) -> g.Timestamp |> should not' (equal (DateTimeOffset())))
 
             valveGames |> verifyMetadata
+
+        [<Fact>]
+        let ``query with a table entity type``() =
+            let valveGames = 
+                Query.all<GameTableEntity> 
+                |> Query.where <@ fun g s -> s.PartitionKey = "Valve" @> 
+                |> fromTable tableClient gameTableName
+                |> Seq.toArray
+            
+            valveGames |> verifyRecords [|
+                { Developer = "Valve"; Name = "Half-Life 2"; Platform = "PC"; HasMultiplayer = true }
+                { Developer = "Valve"; Name = "Portal"; Platform = "PC"; HasMultiplayer = false } 
+                { Developer = "Valve"; Name = "Portal 2"; Platform = "PC"; HasMultiplayer = false }
+            |]
+
+            valveGames |> Array.iter (fun (g, _) -> g.PartitionKey |> should equal "Valve")
+            valveGames |> Array.exists (fun (g, _) -> g.RowKey = "Half-Life 2-PC" ) |> should equal true
+            valveGames |> Array.exists (fun (g, _) -> g.RowKey = "Portal-PC" ) |> should equal true
+            valveGames |> Array.exists (fun (g, _) -> g.RowKey = "Portal 2-PC" ) |> should equal true
+            valveGames |> Array.iter (fun (g, _) -> g.Timestamp |> should not' (equal (DateTimeOffset())))
+
+            valveGames |> verifyMetadata
+
+        [<Fact>]
+        let ``querying with types that aren't records or implement ITableEntity fails``() = 
+            (fun () -> Query.all<NonTableEntityClass> |> fromTable tableClient gameTableName |> ignore)
+                |> should throw typeof<Exception>
+

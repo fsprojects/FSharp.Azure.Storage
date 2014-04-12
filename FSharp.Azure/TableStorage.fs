@@ -76,7 +76,7 @@
             static let recordWriter = 
                 FSharpValue.PreComputeRecordConstructor typeof<'T> >> (fun o -> o :?> 'T)
 
-            static member ResolveEntity (pk : string) (rk : string) (timestamp: DateTimeOffset) (properties : IDictionary<string, EntityProperty>) (etag : string) =
+            static member ResolveRecord (pk : string) (rk : string) (timestamp: DateTimeOffset) (properties : IDictionary<string, EntityProperty>) (etag : string) =
                 let propValues = 
                     recordFields 
                         |> Seq.map (fun f -> 
@@ -115,6 +115,44 @@
                         |> Seq.filter (fun (name, _) -> name <> "PartitionKey" && name <> "RowKey")
                         |> dict
 
+        [<AbstractClass; Sealed>]
+        type private TableEntityTypeCache<'T> private () = 
+            static let tableEntityTypeConstructor = lazy(
+                let ctor = typeof<'T>.GetConstructor([||])
+                if ctor = null then failwithf "Type %s does not have a parameterless constructor" typeof<'T>.Name
+                let lambda = Expr.Lambda(Var("unit", typeof<unit>), Expr.NewObject(ctor, []))
+                Expr.Cast<unit -> 'T>(lambda).Compile()())
+
+            static let resolveTableEntity (pk : string) (rk : string) (timestamp: DateTimeOffset) (properties : IDictionary<string, EntityProperty>) (etag : string) =
+                let entity = tableEntityTypeConstructor.Value()
+                let tableEntity = box entity :?> ITableEntity
+                do tableEntity.PartitionKey <- pk
+                do tableEntity.RowKey <- rk
+                do tableEntity.Timestamp <- timestamp
+                do tableEntity.ReadEntity(properties, null)
+                do tableEntity.ETag <- etag
+                entity, { Etag = etag; Timestamp = timestamp }
+
+            static let createTableOperationFromTableEntity (tableOperation : ITableEntity -> TableOperation) (entity : 'T) etag =
+                let entity = box entity :?> ITableEntity
+                entity.ETag <- etag
+                entity |> tableOperation
+
+            static let createTableOperationFromRecord (tableOperation : ITableEntity -> TableOperation) (record : 'T) etag =
+                let eId = !(TableIdentifier.GetIdentifier) record
+                RecordTableEntityWrapper (record, eId, etag) |> tableOperation
+
+            static member val Resolver = lazy (
+                match typeof<'T> with
+                | t when typeof<ITableEntity>.IsAssignableFrom t -> resolveTableEntity
+                | t when FSharpType.IsRecord t -> RecordTableEntityWrapper.ResolveRecord
+                | t -> failwithf "Type %s must be either an ITableEntity or an F# record type" t.Name)
+
+            static member val CreateTableOperation = lazy (
+                match typeof<'T> with
+                    | t when typeof<ITableEntity>.IsAssignableFrom t -> createTableOperationFromTableEntity
+                    | t when FSharpType.IsRecord t -> createTableOperationFromRecord
+                    | _ -> failwithf "Type %s must be either an ITableEntity or an F# record type" typeof<'T>.Name)
 
         type EntityQuery<'T> = 
             { Filter : string
@@ -254,20 +292,12 @@
             let take count (query : EntityQuery<'T>) =
                 [query; { Filter = ""; TakeCount = Some count };] |> List.reduce (+)
         
-
-        let private createEntityTableOperation (tableOperation : ITableEntity -> TableOperation) record etag =
-            match box record with
-                | :? ITableEntity as entity -> tableOperation entity
-                | _ -> 
-                    let eId = !(TableIdentifier.GetIdentifier) record
-                    RecordTableEntityWrapper (record, eId, etag) |> tableOperation
-
-        let insert record = createEntityTableOperation TableOperation.Insert record null
-        let insertOrMerge record = createEntityTableOperation TableOperation.InsertOrMerge record null
-        let insertOrReplace record = createEntityTableOperation TableOperation.InsertOrReplace record null
-        let merge (record, etag) = createEntityTableOperation TableOperation.Merge record etag
+        let insert record = TableEntityTypeCache.CreateTableOperation.Value TableOperation.Insert record null
+        let insertOrMerge record = TableEntityTypeCache.CreateTableOperation.Value TableOperation.InsertOrMerge record null
+        let insertOrReplace record = TableEntityTypeCache.CreateTableOperation.Value TableOperation.InsertOrReplace record null
+        let merge (record, etag) = TableEntityTypeCache.CreateTableOperation.Value TableOperation.Merge record etag
         let forceMerge record = merge (record, "*")
-        let replace (record, etag) = createEntityTableOperation TableOperation.Replace record etag
+        let replace (record, etag) = TableEntityTypeCache.CreateTableOperation.Value TableOperation.Replace record etag
         let forceReplace record = replace (record, "*")
 
         let inTable (client: CloudTableClient) name operation =
@@ -285,19 +315,22 @@
         let fromTable (client: CloudTableClient) name (query : EntityQuery<'T>) =
             let table = client.GetTableReference name
             let tableQuery = query.ToTableQuery()
-            table.ExecuteQuery<'T * EntityMetadata>(tableQuery, RecordTableEntityWrapper.ResolveEntity)
+            let resolver = TableEntityTypeCache.Resolver.Value //Do not inline this otherwise FSharp will delay execution of .Value until the resolver delegate is called
+            table.ExecuteQuery<'T * EntityMetadata>(tableQuery, resolver)
 
         let fromTableSegmented (client: CloudTableClient) name continuationToken (query : EntityQuery<'T>) =
             let table = client.GetTableReference name
             let tableQuery = query.ToTableQuery()
-            let result = table.ExecuteQuerySegmented<'T * EntityMetadata>(tableQuery, RecordTableEntityWrapper.ResolveEntity, continuationToken |> toNullRef)
+            let resolver = TableEntityTypeCache.Resolver.Value //Do not inline this otherwise FSharp will delay execution of .Value until the resolver delegate is called
+            let result = table.ExecuteQuerySegmented<'T * EntityMetadata>(tableQuery, resolver, continuationToken |> toNullRef)
             result.Results, result.ContinuationToken |> toOption
 
         let fromTableSegmentedAsync (client: CloudTableClient) name continuationToken (query : EntityQuery<'T>) =
             let table = client.GetTableReference name
             let tableQuery = query.ToTableQuery()
+            let resolver = TableEntityTypeCache.Resolver.Value //Do not inline this otherwise FSharp will delay execution of .Value until the resolver delegate is called
             async {
-                let! result = table.ExecuteQuerySegmentedAsync<'T * EntityMetadata>(tableQuery, RecordTableEntityWrapper.ResolveEntity, continuationToken |> toNullRef) |> Async.AwaitTask
+                let! result = table.ExecuteQuerySegmentedAsync<'T * EntityMetadata>(tableQuery, resolver, continuationToken |> toNullRef) |> Async.AwaitTask
                 return result.Results, result.ContinuationToken |> toOption
             }
 
