@@ -1,0 +1,17 @@
+﻿<?xml version="1.0"?>
+<package>
+  <metadata>
+    <id>FSharp.Azure</id>
+    <version>$version$</version>
+    <title>FSharp.Azure</title>
+    <authors>Daniel Chambers &amp; Contributors</authors>
+    <owners>Daniel Chambers &amp; Contributors</owners>
+    <projectUrl>https://github.com/daniel-chambers/fsharp.azure</projectUrl>
+    <licenseUrl>https://github.com/daniel-chambers/FSharp.Azure/blob/master/LICENCE.txt</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>A library that provides an idiomatic F# API for Microsoft Azure services.</description>
+    <releaseNotes>Alpha release that focuses on working with table storage</releaseNotes>
+    <copyright>Copyright 2014</copyright>
+    <tags>fsharp f# microsoft azure table storage</tags>
+  </metadata>
+</package>
