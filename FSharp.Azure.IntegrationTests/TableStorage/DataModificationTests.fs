@@ -23,6 +23,10 @@ module DataModification =
           [<PartitionKey>] Developer : string
           HasMultiplayer: bool }
 
+    type TypeWithSystemProps = 
+        { [<PartitionKey>] PartitionKey : string; 
+          [<RowKey>] RowKey : string; 
+          Timestamp : DateTimeOffset }
 
     type Tests() = 
     
@@ -245,3 +249,13 @@ module DataModification =
 
             (fun () -> (gameSummary, "bogus") |> merge |> inTable gameTableName |> ignore) 
                 |> should throw typeof<StorageException>
+
+
+        [<Fact>]
+        let ``works when inserting a type that has properties that are system properties``() =
+            //Note that Timestamp will be ignored by table storage
+            let record = { PartitionKey = "TestPK"; RowKey = "TestRK"; Timestamp = DateTimeOffset.Now }
+
+            let result = record |> insert |> inTable gameTableName
+
+            result.HttpStatusCode |> should equal 204

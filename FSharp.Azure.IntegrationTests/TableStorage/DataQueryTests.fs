@@ -19,6 +19,11 @@ module DataQuery =
             member g.GetIdentifier() = 
                 { PartitionKey = g.Developer; RowKey = g.Name + "-" + g.Platform }
 
+    type TypeWithSystemProps = 
+        { [<PartitionKey>] PartitionKey : string; 
+          [<RowKey>] RowKey : string; 
+          Timestamp : DateTimeOffset }
+
     type Simple = { [<PartitionKey>] PK : string; [<RowKey>] RK : string }
 
     type Tests() = 
@@ -30,12 +35,9 @@ module DataQuery =
         do gameTable.DeleteIfExists() |> ignore
         do gameTable.Create() |> ignore
 
-        let inTable = inTable tableClient
         let inTableAsync = inTableAsync tableClient
-        let fromTable = fromTable tableClient
-        let fromTableSegmented = fromTableSegmented tableClient
-        let fromTableSegmentedAsync = fromTableSegmentedAsync tableClient
-        let fromTableAsync = fromTableAsync tableClient
+        let fromGameTable = fromTable tableClient gameTableName
+        let fromGameTableAsync = fromTableAsync tableClient gameTableName
 
         static let data = [
             { Developer = "343 Studios"; Name = "Halo 4"; Platform = "Xbox 360"; HasMultiplayer = true }
@@ -65,8 +67,8 @@ module DataQuery =
 
         let verifyMetadata metadata = 
             metadata |> Seq.iter (fun (_, m) ->
-                m.Timestamp |> should not' (equal (DateTimeOffset()))
                 m.Etag |> should not' (be NullOrEmptyString)
+                m.Timestamp |> should not' (equal (DateTimeOffset()))
             )
 
         let verifyRecords expected actual = 
@@ -81,7 +83,7 @@ module DataQuery =
             let halo4 = 
                 Query.all<Game> 
                 |> Query.where <@ fun g s -> s.PartitionKey = "343 Studios" && s.RowKey = "Halo 4-Xbox 360" @> 
-                |> fromTable gameTableName
+                |> fromGameTable
                 |> Seq.toArray
             
             halo4 |> verifyRecords [|
@@ -95,7 +97,7 @@ module DataQuery =
             let valveGames = 
                 Query.all<Game> 
                 |> Query.where <@ fun g s -> s.PartitionKey = "Valve" @> 
-                |> fromTable gameTableName 
+                |> fromGameTable 
                 |> Seq.toArray
             
             valveGames |> verifyRecords [|
@@ -111,7 +113,7 @@ module DataQuery =
             let valveGames = 
                 Query.all<Game> 
                 |> Query.where <@ fun g s -> (g.Platform = "Xbox 360" || g.Platform = "PC") && not (g.Developer = "Bungie") @> 
-                |> fromTable gameTableName 
+                |> fromGameTable 
                 |> Seq.toArray
             
             valveGames |> verifyRecords [|
@@ -131,7 +133,7 @@ module DataQuery =
                 Query.all<Game> 
                 |> Query.where <@ fun g s -> s.PartitionKey = "Valve" @> 
                 |> Query.take 2
-                |> fromTable gameTableName 
+                |> fromGameTable 
                 |> Seq.toArray
             
             valveGames |> verifyRecords [|
@@ -146,7 +148,7 @@ module DataQuery =
             let valveGames = 
                 Query.all<Game> 
                 |> Query.where <@ fun g s -> s.PartitionKey = "Valve" @> 
-                |> fromTableAsync gameTableName 
+                |> fromGameTableAsync 
                 |> Async.RunSynchronously
                 |> Seq.toArray
             
@@ -159,6 +161,8 @@ module DataQuery =
             valveGames |> verifyMetadata
 
         let simpleTableName = "TestsSimple"
+        let fromSimpleTableSegmented = fromTableSegmented tableClient simpleTableName
+        let fromSimpleTableSegmentedAsync = fromTableSegmentedAsync tableClient simpleTableName
         let createDataForSegmentQueries() = 
             let simpleTable = tableClient.GetTableReference simpleTableName
 
@@ -182,13 +186,13 @@ module DataQuery =
 
             let (simples1, segmentToken1) = 
                 Query.all<Simple> 
-                |> fromTableSegmented simpleTableName None
+                |> fromSimpleTableSegmented None
 
             segmentToken1.IsSome |> should equal true
 
             let (simples2, segmentToken2) = 
                 Query.all<Simple> 
-                |> fromTableSegmented simpleTableName segmentToken1
+                |> fromSimpleTableSegmented segmentToken1
 
             segmentToken2.IsNone |> should equal true
 
@@ -202,14 +206,14 @@ module DataQuery =
 
             let (simples1, segmentToken1) = 
                 Query.all<Simple> 
-                |> fromTableSegmentedAsync simpleTableName None
+                |> fromSimpleTableSegmentedAsync None
                 |> Async.RunSynchronously
 
             segmentToken1.IsSome |> should equal true
 
             let (simples2, segmentToken2) = 
                 Query.all<Simple> 
-                |> fromTableSegmentedAsync simpleTableName segmentToken1
+                |> fromSimpleTableSegmentedAsync segmentToken1
                 |> Async.RunSynchronously
 
             segmentToken2.IsNone |> should equal true
@@ -217,3 +221,20 @@ module DataQuery =
             let allSimples = [simples1; simples2] |> Seq.concat |> Seq.toArray
             allSimples |> verifyRecords rows
             allSimples |> verifyMetadata
+
+        [<Fact>]
+        let ``query with a type that has system properties on it``() =
+
+            let valveGames = 
+                Query.all<TypeWithSystemProps> 
+                |> Query.where <@ fun g s -> s.PartitionKey = "Valve" @> 
+                |> fromTable tableClient gameTableName
+                |> Seq.toArray
+            
+            valveGames |> Array.iter (fun (g, _) -> g.PartitionKey |> should equal "Valve")
+            valveGames |> Array.exists (fun (g, _) -> g.RowKey = "Half-Life 2-PC" ) |> should equal true
+            valveGames |> Array.exists (fun (g, _) -> g.RowKey = "Portal-PC" ) |> should equal true
+            valveGames |> Array.exists (fun (g, _) -> g.RowKey = "Portal 2-PC" ) |> should equal true
+            valveGames |> Array.iter (fun (g, _) -> g.Timestamp |> should not' (equal (DateTimeOffset())))
+
+            valveGames |> verifyMetadata

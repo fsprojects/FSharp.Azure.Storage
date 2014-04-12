@@ -87,11 +87,16 @@
                                 | value when value.GetType() <> f.PropertyType -> 
                                     failwithf "The property %s on type %s of type %s has deserialized as the incorrect type %s" f.Name typeof<'T>.Name f.PropertyType.Name (value.GetType().Name)
                                 | value -> value
-                            | None -> runtimeGetUncheckedDefault f.PropertyType)
+                            | None -> 
+                                match f.Name with
+                                | "PartitionKey" when f.PropertyType = typeof<string> -> pk :> obj
+                                | "RowKey" when f.PropertyType = typeof<string> -> rk :> obj
+                                | "Timestamp" when f.PropertyType = typeof<DateTimeOffset> -> timestamp :> obj
+                                | _ -> runtimeGetUncheckedDefault f.PropertyType)
                         |> Seq.toArray
                 (recordWriter propValues), { Etag = etag; Timestamp = timestamp }
 
-            member this.Record with get() = record
+            member this.Record = record
 
             interface ITableEntity with
                 member val PartitionKey : string = identifier.PartitionKey with get, set
@@ -107,7 +112,9 @@
                         |> recordReader
                         |> Seq.map EntityProperty.CreateEntityPropertyFromObject 
                         |> Seq.zip (recordFields |> Seq.map (fun p -> p.Name))
+                        |> Seq.filter (fun (name, _) -> name <> "PartitionKey" && name <> "RowKey")
                         |> dict
+
 
         type EntityQuery<'T> = 
             { Filter : string
