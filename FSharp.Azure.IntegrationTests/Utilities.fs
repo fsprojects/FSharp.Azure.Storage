@@ -1,12 +1,8 @@
 ﻿namespace DigitallyCreated.FSharp.Azure.IntegrationTests
 
-module Array = 
-    let window skip take (arr : 'a[]) =
-        seq {
-            for i in skip .. min (skip + take - 1) (arr.Length - 1) do yield arr.[i]
-        }
-
 module Async =
+    open DigitallyCreated.FSharp.Azure
+
     let Sequential computations =
         async {
             let results = ref []
@@ -18,8 +14,10 @@ module Async =
 
 
     let ParallelByDegree degree computations = 
+        if degree < 1 then invalidArg "degree" "degree must be 1 or greater" 
         let computations = Array.ofSeq computations
         let windowSize = float(computations.Length) / float(degree) |> ceil |> int
+        let degree = if windowSize = 1 then computations.Length else degree
         let splitSequentialWork = 
             seq { for i in 0 .. degree - 1 -> computations |> Array.window (i * windowSize) windowSize } 
             |> Seq.map Sequential

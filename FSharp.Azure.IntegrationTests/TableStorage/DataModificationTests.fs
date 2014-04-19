@@ -38,6 +38,7 @@ module DataModification =
     type NonTableEntityClass() =
         member val Name : string = null with get,set
 
+
     type Tests() = 
     
         let account = CloudStorageAccount.Parse "UseDevelopmentStorage=true;"
@@ -45,8 +46,10 @@ module DataModification =
         let gameTableName = "TestsGame"
         let gameTable = tableClient.GetTableReference gameTableName
 
-        let inTable = inTable tableClient
-        let inTableAsync = inTableAsync tableClient
+        let inGameTable e = inTable tableClient gameTableName e
+        let inGameTableAsync e = inTableAsync tableClient gameTableName e
+        let inGameTableAsBatch e = inTableAsBatch tableClient gameTableName e
+        let inGameTableAsBatchAsync e = inTableAsBatchAsync tableClient gameTableName e
 
         do gameTable.DeleteIfExists() |> ignore
         do gameTable.Create() |> ignore
@@ -82,7 +85,7 @@ module DataModification =
                   Developer = "343 Industries"
                   HasMultiplayer = true }
 
-            let result = game |> insert |> inTable gameTableName
+            let result = game |> Insert |> inGameTable
 
             result.HttpStatusCode |> should equal 204
             verifyGame game
@@ -96,7 +99,7 @@ module DataModification =
                   Developer = "343 Industries"
                   HasMultiplayer = true }
 
-            let result = game |> insert |> inTableAsync gameTableName |> Async.RunSynchronously
+            let result = game |> Insert |> inGameTableAsync |> Async.RunSynchronously
 
             result.HttpStatusCode |> should equal 204
             verifyGame game
@@ -110,8 +113,8 @@ module DataModification =
                   Developer = "343 Industries"
                   HasMultiplayer = true }
 
-            game |> insert |> inTable gameTableName |> ignore
-            (fun () -> game |> insert |> inTable gameTableName |> ignore) 
+            game |> Insert |> inGameTable |> ignore
+            (fun () -> game |> Insert |> inGameTable |> ignore) 
                 |> should throw typeof<StorageException>
 
 
@@ -123,14 +126,14 @@ module DataModification =
                   Developer = "343 Industries"
                   HasMultiplayer = true }
 
-            game |> insert |> inTable gameTableName |> ignore
+            game |> Insert |> inGameTable |> ignore
 
             let gameChanged = 
                 { game with
                     Platform = "PC"
                     HasMultiplayer = false }
 
-            let result = gameChanged |> insertOrReplace |> inTable gameTableName
+            let result = gameChanged |> InsertOrReplace |> inGameTable
             result.HttpStatusCode |> should equal 204
             verifyGame gameChanged
 
@@ -143,14 +146,14 @@ module DataModification =
                   Developer = "343 Industries"
                   HasMultiplayer = true }
 
-            game |> insert |> inTable gameTableName |> ignore
+            game |> Insert |> inGameTable |> ignore
 
             let gameChanged = 
                 { game with
                     Platform = "PC"
                     HasMultiplayer = false }
 
-            let result = gameChanged |> forceReplace |> inTable gameTableName
+            let result = gameChanged |> ForceReplace |> inGameTable
             result.HttpStatusCode |> should equal 204
             verifyGame gameChanged
 
@@ -163,14 +166,14 @@ module DataModification =
                   Developer = "343 Industries"
                   HasMultiplayer = true }
 
-            let originalResult = game |> insert |> inTable gameTableName
+            let originalResult = game |> Insert |> inGameTable
 
             let gameChanged = 
                 { game with
                     Platform = "PC"
                     HasMultiplayer = false }
 
-            let result = (gameChanged, originalResult.Etag) |> replace |> inTable gameTableName
+            let result = (gameChanged, originalResult.Etag) |> Replace |> inGameTable
             result.HttpStatusCode |> should equal 204
             verifyGame gameChanged
 
@@ -183,14 +186,14 @@ module DataModification =
                   Developer = "343 Industries"
                   HasMultiplayer = true }
 
-            let originalResult = game |> insert |> inTable gameTableName
+            let originalResult = game |> Insert |> inGameTable
 
             let gameChanged = 
                 { game with
                     Platform = "PC"
                     HasMultiplayer = false }
 
-            (fun () -> (gameChanged, "bogus") |> replace |> inTable gameTableName |> ignore)
+            (fun () -> (gameChanged, "bogus") |> Replace |> inGameTable |> ignore)
                 |> should throw typeof<StorageException>
 
 
@@ -202,14 +205,14 @@ module DataModification =
                   Developer = "343 Industries"
                   HasMultiplayer = true }
 
-            game |> insert |> inTable gameTableName |> ignore
+            game |> Insert |> inGameTable |> ignore
 
             let gameSummary = 
                 { GameSummary.Name = game.Name
                   Platform = "PC"
                   Developer = game.Developer }
 
-            let result = gameSummary |> insertOrMerge |> inTable gameTableName
+            let result = gameSummary |> InsertOrMerge |> inGameTable
             result.HttpStatusCode |> should equal 204
             verifyGame { game with Platform = "PC" }
 
@@ -222,14 +225,14 @@ module DataModification =
                   Developer = "343 Industries"
                   HasMultiplayer = true }
 
-            game |> insert |> inTable gameTableName |> ignore
+            game |> Insert |> inGameTable |> ignore
 
             let gameSummary = 
                 { GameSummary.Name = game.Name
                   Platform = "PC"
                   Developer = game.Developer }
 
-            let result = gameSummary |> forceMerge |> inTable gameTableName
+            let result = gameSummary |> ForceMerge |> inGameTable
             result.HttpStatusCode |> should equal 204
             verifyGame { game with Platform = "PC" }
 
@@ -242,14 +245,14 @@ module DataModification =
                   Developer = "343 Industries"
                   HasMultiplayer = true }
 
-            let originalResult = game |> insert |> inTable gameTableName
+            let originalResult = game |> Insert |> inGameTable
 
             let gameSummary = 
                 { GameSummary.Name = game.Name
                   Platform = "PC"
                   Developer = game.Developer }
 
-            let result = (gameSummary, originalResult.Etag) |> merge |> inTable gameTableName
+            let result = (gameSummary, originalResult.Etag) |> Merge |> inGameTable
             result.HttpStatusCode |> should equal 204
             verifyGame { game with Platform = "PC" }
 
@@ -262,14 +265,14 @@ module DataModification =
                   Developer = "343 Industries"
                   HasMultiplayer = true }
 
-            game |> insert |> inTable gameTableName |> ignore
+            game |> Insert |> inGameTable |> ignore
 
             let gameSummary = 
                 { GameSummary.Name = game.Name
                   Platform = "PC"
                   Developer = game.Developer }
 
-            (fun () -> (gameSummary, "bogus") |> merge |> inTable gameTableName |> ignore) 
+            (fun () -> (gameSummary, "bogus") |> Merge |> inGameTable |> ignore) 
                 |> should throw typeof<StorageException>
 
 
@@ -278,7 +281,7 @@ module DataModification =
             //Note that Timestamp will be ignored by table storage
             let record = { PartitionKey = "TestPK"; RowKey = "TestRK"; Timestamp = DateTimeOffset.Now }
 
-            let result = record |> insert |> inTable gameTableName
+            let result = record |> Insert |> inGameTable
 
             result.HttpStatusCode |> should equal 204
 
@@ -293,7 +296,7 @@ module DataModification =
                                  PartitionKey = "343 Industries",
                                  RowKey = "Halo 4")
 
-            let result = game |> insert |> inTable gameTableName
+            let result = game |> Insert |> inGameTable
 
             result.HttpStatusCode |> should equal 204
             verifyGameTableEntity game
@@ -309,18 +312,95 @@ module DataModification =
                                  PartitionKey = "343 Industries",
                                  RowKey = "Halo 4")
 
-            let originalResult = game |> insert |> inTable gameTableName
+            let originalResult = game |> Insert |> inGameTable
 
             do game.Platform <- "PC"
             do game.HasMultiplayer <- false
             do game.ETag <- null //This is to prove that replace will respect the etag you pass to it (below)
 
-            let result = (game, originalResult.Etag) |> replace |> inTable gameTableName
+            let result = (game, originalResult.Etag) |> Replace |> inGameTable
             result.HttpStatusCode |> should equal 204
             verifyGameTableEntity game
 
 
         [<Fact>]
         let ``inserting with types that aren't records or implement ITableEntity fails``() = 
-            (fun () -> Query.all<NonTableEntityClass> |> fromTable tableClient gameTableName |> ignore)
+            (fun () -> NonTableEntityClass() |> Insert |> inGameTable |> ignore)
                 |> should throw typeof<Exception>
+
+
+        [<Fact>]
+        let ``inserting many entities using autobatching works``() = 
+            let games = 
+                [seq { for i in 1 .. 120 -> 
+                        { Developer = "Valve"; Name = sprintf "Portal %i" i; Platform = "PC"; HasMultiplayer = true } };
+                 seq { for i in 1 .. 150 -> 
+                        { Developer = "343 Industries"; Name = sprintf "Halo %i" i; Platform = "PC"; HasMultiplayer = true } }]
+                |> Seq.concat
+                |> Seq.toList
+
+            let batches = games |> Seq.map Insert |> autobatch
+
+            batches.Length |> should equal 4
+            batches |> Seq.head |> List.length |> should equal MaxBatchSize
+            batches |> Seq.skip 1 |> Seq.head |> List.length |> should equal 20
+            batches |> Seq.skip 2 |> Seq.head |> List.length |> should equal MaxBatchSize
+            batches |> Seq.skip 3 |> Seq.head |> List.length |> should equal 50
+
+            let results = batches |> List.map inGameTableAsBatch
+
+            results |> Seq.concat |> Seq.iter (fun r -> r.HttpStatusCode |> should equal 204)
+            let readGames = 
+                Query.all<Game> 
+                |> fromTable tableClient gameTableName 
+                |> Seq.map fst
+                |> Seq.toList
+            games |> Seq.iter (fun rg -> readGames |> List.exists (fun g -> g = rg) |> should equal true)
+            readGames.Length |> should equal games.Length
+
+
+        [<Fact>]
+        let ``inserting many entities asynchronously using autobatching works``() = 
+            let games = 
+                [seq { for i in 1 .. 120 -> 
+                        { Developer = "Valve"; Name = sprintf "Portal %i" i; Platform = "PC"; HasMultiplayer = true } };
+                 seq { for i in 1 .. 150 -> 
+                        { Developer = "343 Industries"; Name = sprintf "Halo %i" i; Platform = "PC"; HasMultiplayer = true } }]
+                |> Seq.concat
+                |> Seq.toList
+
+            let batches = games |> Seq.map Insert |> autobatch
+
+            batches.Length |> should equal 4
+            batches |> Seq.head |> List.length |> should equal MaxBatchSize
+            batches |> Seq.skip 1 |> Seq.head |> List.length |> should equal 20
+            batches |> Seq.skip 2 |> Seq.head |> List.length |> should equal MaxBatchSize
+            batches |> Seq.skip 3 |> Seq.head |> List.length |> should equal 50
+
+            let results = 
+                batches 
+                |> List.map inGameTableAsBatchAsync
+                |> Async.Parallel
+                |> Async.RunSynchronously
+
+            results |> Seq.concat |> Seq.iter (fun r -> r.HttpStatusCode |> should equal 204)
+            let readGames = 
+                Query.all<Game> 
+                |> fromTable tableClient gameTableName 
+                |> Seq.map fst
+                |> Seq.toList
+            games |> Seq.iter (fun rg -> readGames |> List.exists (fun g -> g = rg) |> should equal true)
+            readGames.Length |> should equal games.Length
+
+
+        [<Fact>]
+        let ``inserting two of the same entity with autobatching fails``() = 
+            let games = [
+                { Developer = "Valve"; Name = sprintf "Portal"; Platform = "PC"; HasMultiplayer = true }
+                { Developer = "Valve"; Name = sprintf "Portal"; Platform = "PC"; HasMultiplayer = false }
+            ]
+
+            (fun () -> games |> Seq.map Insert |> autobatch |> ignore)
+                |> should throw typeof<Exception>
+            
+

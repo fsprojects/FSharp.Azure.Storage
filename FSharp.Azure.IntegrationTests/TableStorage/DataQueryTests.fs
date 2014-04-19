@@ -65,12 +65,11 @@ module DataQuery =
         do gameTable.DeleteIfExists() |> ignore
         do gameTable.Create() |> ignore
 
-        let inTableAsync = inTableAsync tableClient
         let fromGameTable = fromTable tableClient gameTableName
         let fromGameTableAsync = fromTableAsync tableClient gameTableName
 
         static let data = [
-            { Developer = "343 Studios"; Name = "Halo 4"; Platform = "Xbox 360"; HasMultiplayer = true }
+            { Developer = "343 Industries"; Name = "Halo 4"; Platform = "Xbox 360"; HasMultiplayer = true }
             { Developer = "Bungie"; Name = "Halo 3"; Platform = "Xbox 360"; HasMultiplayer = true } 
             { Developer = "Bungie"; Name = "Halo 2"; Platform = "Xbox 360"; HasMultiplayer = true } 
             { Developer = "Bungie"; Name = "Halo 2"; Platform = "PC"; HasMultiplayer = true } 
@@ -88,9 +87,12 @@ module DataQuery =
 
         let insertInParallel tableName items = 
             items 
-            |> Seq.map (fun r -> r |> insert |> inTableAsync tableName) 
+            |> Seq.map (fun r -> r |> Insert) 
+            |> autobatch
+            |> Seq.map (fun b -> b |> inTableAsBatchAsync tableClient tableName)
             |> Async.ParallelByDegree 4 
             |> Async.RunSynchronously
+            |> Seq.concat
             |> Seq.iter (fun r -> r.HttpStatusCode |> should equal 204)
 
         do data |> insertInParallel gameTableName |> ignore
@@ -112,12 +114,12 @@ module DataQuery =
         let ``query by specific instance``() = 
             let halo4 = 
                 Query.all<Game> 
-                |> Query.where <@ fun g s -> s.PartitionKey = "343 Studios" && s.RowKey = "Halo 4-Xbox 360" @> 
+                |> Query.where <@ fun g s -> s.PartitionKey = "343 Industries" && s.RowKey = "Halo 4-Xbox 360" @> 
                 |> fromGameTable
                 |> Seq.toArray
             
             halo4 |> verifyRecords [|
-                { Developer = "343 Studios"; Name = "Halo 4"; Platform = "Xbox 360"; HasMultiplayer = true }
+                { Developer = "343 Industries"; Name = "Halo 4"; Platform = "Xbox 360"; HasMultiplayer = true }
             |]
 
             halo4 |> verifyMetadata
@@ -147,7 +149,7 @@ module DataQuery =
                 |> Seq.toArray
             
             valveGames |> verifyRecords [|
-                { Developer = "343 Studios"; Name = "Halo 4"; Platform = "Xbox 360"; HasMultiplayer = true }
+                { Developer = "343 Industries"; Name = "Halo 4"; Platform = "Xbox 360"; HasMultiplayer = true }
                 { Developer = "Valve"; Name = "Half-Life 2"; Platform = "PC"; HasMultiplayer = true } 
                 { Developer = "Valve"; Name = "Portal"; Platform = "PC"; HasMultiplayer = false } 
                 { Developer = "Valve"; Name = "Portal 2"; Platform = "PC"; HasMultiplayer = false } 

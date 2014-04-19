@@ -1,6 +1,7 @@
 ﻿namespace DigitallyCreated.FSharp.Azure
 
 open System.Reflection
+open System.Runtime.CompilerServices
 
 [<assembly: AssemblyTitle("DigitallyCreated.FSharp.Azure")>]
 [<assembly: AssemblyCompany("Daniel Chambers & Contributors")>]
@@ -10,5 +11,7 @@ open System.Reflection
 [<assembly: AssemblyVersion("1.0.0.0")>]
 [<assembly: AssemblyFileVersion("1.0.0.0")>]
 [<assembly: AssemblyInformationalVersion("1.0.0-alpha")>]
+
+[<assembly: InternalsVisibleTo("DigitallyCreated.FSharp.Azure.IntegrationTests")>]
 
 do()

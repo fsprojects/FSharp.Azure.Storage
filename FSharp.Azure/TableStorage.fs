@@ -16,9 +16,29 @@
         open Microsoft.WindowsAzure.Storage.Table
         open Utilities
 
+        let MaxBatchSize = 100
+
         type TableEntityIdentifier = { PartitionKey : string; RowKey : string; }
         type OperationResult = { HttpStatusCode : int; Etag : string }
         type EntityMetadata = { Etag : string; Timestamp : DateTimeOffset }
+
+        type Operation<'T> =
+            | Insert of entity : 'T
+            | InsertOrMerge of entity : 'T
+            | InsertOrReplace of entity : 'T
+            | Replace of entity : 'T * etag : string
+            | ForceReplace of entity : 'T
+            | Merge of entity : 'T * etag : string
+            | ForceMerge of entity : 'T
+            member this.GetEntity() = 
+                match this with
+                | Insert (entity) -> entity
+                | InsertOrMerge (entity) -> entity
+                | InsertOrReplace (entity) -> entity
+                | Merge (entity, _) -> entity
+                | ForceMerge (entity) -> entity
+                | Replace (entity, _) -> entity
+                | ForceReplace (entity) -> entity
 
         type ITableIdentifiable = 
             abstract member GetIdentifier : unit -> TableEntityIdentifier
@@ -29,41 +49,43 @@
         [<AllowNullLiteralAttribute>]
         type RowKeyAttribute () = inherit Attribute()
 
+
         let private getPropertyByAttribute<'T, 'TAttr, 'TReturn when 'TAttr :> Attribute and 'TAttr : null>() =
-            let partitionKeyProperties = 
-                typeof<'T>.GetProperties() 
-                    |> Seq.where (fun p -> p.CanRead)
-                    |> Seq.where (fun p -> p.GetCustomAttribute<'TAttr>() |> isNotNull)
-                    |> Seq.toList
+           let partitionKeyProperties = 
+               typeof<'T>.GetProperties() 
+                   |> Seq.where (fun p -> p.CanRead)
+                   |> Seq.where (fun p -> p.GetCustomAttribute<'TAttr>() |> isNotNull)
+                   |> Seq.toList
 
-            match partitionKeyProperties with
-                | h :: [] when h.PropertyType = typeof<'TReturn> -> h
-                | h :: [] -> failwithf "The property %s on type %s that is marked with %s is not of type %s" h.Name typeof<'T>.Name typeof<'TAttr>.Name typeof<'TReturn>.Name 
-                | h :: t -> failwithf "The type %s contains more than one property with %s" typeof<'T>.Name typeof<'TAttr>.Name
-                | [] -> failwithf "The type %s does not contain a property with %s" typeof<'T>.Name typeof<'TAttr>.Name
-
-        let private buildIdentiferFromAttributesFunc<'T>() =
-            let partitionKeyProperty = getPropertyByAttribute<'T, PartitionKeyAttribute, string>()
-            let rowKeyProperty = getPropertyByAttribute<'T, RowKeyAttribute, string>()
-
-            let var = Var("o", typeof<'T>)
-            let pk = Expr.PropertyGet (Expr.Var(var), partitionKeyProperty)
-            let rk = Expr.PropertyGet (Expr.Var(var), rowKeyProperty)
-            
-            let recordInitializer = <@ { PartitionKey = %%pk; RowKey = %%rk } @>
-
-            let quotation = Expr.Cast<'T -> TableEntityIdentifier>(Expr.Lambda(var, recordInitializer))
-            quotation.Compile()()
+           match partitionKeyProperties with
+               | h :: [] when h.PropertyType = typeof<'TReturn> -> h
+               | h :: [] -> failwithf "The property %s on type %s that is marked with %s is not of type %s" h.Name typeof<'T>.Name typeof<'TAttr>.Name typeof<'TReturn>.Name 
+               | h :: t -> failwithf "The type %s contains more than one property with %s" typeof<'T>.Name typeof<'TAttr>.Name
+               | [] -> failwithf "The type %s does not contain a property with %s" typeof<'T>.Name typeof<'TAttr>.Name
 
 
         [<AbstractClass; Sealed>]
         type TableIdentifier<'T> private () =
-            static let getFromAttributes = lazy buildIdentiferFromAttributesFunc<'T>()
+            static let buildIdentiferFromAttributesFunc() =
+                let partitionKeyProperty = getPropertyByAttribute<'T, PartitionKeyAttribute, string>()
+                let rowKeyProperty = getPropertyByAttribute<'T, RowKeyAttribute, string>()
 
-            static let defaultGetIdentifier record =
-                match box record with
-                | :? ITableIdentifiable as identifiable -> identifiable.GetIdentifier()
-                | _ -> getFromAttributes.Value(record)
+                let var = Var("o", typeof<'T>)
+                let pk = Expr.PropertyGet (Expr.Var(var), partitionKeyProperty)
+                let rk = Expr.PropertyGet (Expr.Var(var), rowKeyProperty)
+            
+                let recordInitializer = <@ { PartitionKey = %%pk; RowKey = %%rk } @>
+
+                let quotation = Expr.Cast<'T -> TableEntityIdentifier>(Expr.Lambda(var, recordInitializer))
+                quotation.Compile()()
+
+            static let defaultGetIdentifier = 
+                match typeof<'T> with
+                | t when typeof<ITableIdentifiable>.IsAssignableFrom t -> fun (e : 'T) -> (box e :?> ITableIdentifiable).GetIdentifier()
+                | t when typeof<ITableEntity>.IsAssignableFrom t -> fun (e : 'T) -> 
+                    let tableEntity = (box e :?> ITableEntity)
+                    { PartitionKey = tableEntity.PartitionKey; RowKey = tableEntity.RowKey }
+                | _ -> buildIdentiferFromAttributesFunc()
                     
             static member GetIdentifier = ref defaultGetIdentifier
 
@@ -292,25 +314,75 @@
             let take count (query : EntityQuery<'T>) =
                 [query; { Filter = ""; TakeCount = Some count };] |> List.reduce (+)
         
-        let insert record = TableEntityTypeCache.CreateTableOperation.Value TableOperation.Insert record null
-        let insertOrMerge record = TableEntityTypeCache.CreateTableOperation.Value TableOperation.InsertOrMerge record null
-        let insertOrReplace record = TableEntityTypeCache.CreateTableOperation.Value TableOperation.InsertOrReplace record null
-        let merge (record, etag) = TableEntityTypeCache.CreateTableOperation.Value TableOperation.Merge record etag
-        let forceMerge record = merge (record, "*")
-        let replace (record, etag) = TableEntityTypeCache.CreateTableOperation.Value TableOperation.Replace record etag
-        let forceReplace record = replace (record, "*")
 
-        let inTable (client: CloudTableClient) name operation =
-            let table = client.GetTableReference name
-            let result = table.Execute operation
+        let private convertToTableOperation operation =
+            match operation with
+            | Insert (entity) -> TableEntityTypeCache.CreateTableOperation.Value TableOperation.Insert entity null
+            | InsertOrMerge (entity) -> TableEntityTypeCache.CreateTableOperation.Value TableOperation.InsertOrMerge entity null
+            | InsertOrReplace (entity) -> TableEntityTypeCache.CreateTableOperation.Value TableOperation.InsertOrReplace entity null
+            | Merge (entity, etag) -> TableEntityTypeCache.CreateTableOperation.Value TableOperation.Merge entity etag
+            | ForceMerge (entity) -> TableEntityTypeCache.CreateTableOperation.Value TableOperation.Merge entity "*"
+            | Replace (entity, etag) -> TableEntityTypeCache.CreateTableOperation.Value TableOperation.Replace entity etag
+            | ForceReplace (entity) -> TableEntityTypeCache.CreateTableOperation.Value TableOperation.Replace entity "*"
+
+        let private createBatchOperation operations = 
+            let batchOperation = TableBatchOperation()
+            do operations |> Seq.map convertToTableOperation |> Seq.iter batchOperation.Add
+            batchOperation
+
+        let private convertToOperationResult (result : TableResult) = 
             { HttpStatusCode = result.HttpStatusCode; Etag = result.Etag }
 
-        let inTableAsync (client: CloudTableClient) name operation = 
+        let inTable (client: CloudTableClient) tableName operation = 
+            let table = client.GetTableReference tableName
+            operation |> convertToTableOperation |> table.Execute |> convertToOperationResult
+
+        let inTableAsync (client: CloudTableClient) tableName operation = 
             async {
-                let table = client.GetTableReference name
-                let! result = table.ExecuteAsync operation |> Async.AwaitTask
-                return { HttpStatusCode = result.HttpStatusCode; Etag = result.Etag }
+                let table = client.GetTableReference tableName
+                let tableOperation = operation |> convertToTableOperation
+                let! result = tableOperation |> table.ExecuteAsync |> Async.AwaitTask
+                return result |> convertToOperationResult
             }
+        
+        let inTableAsBatch (client: CloudTableClient) tableName operations =
+            let table = client.GetTableReference tableName
+            let batchOperation = operations |> createBatchOperation
+            let results = batchOperation |> table.ExecuteBatch
+            results |> Seq.map convertToOperationResult |> Seq.toList
+
+        let inTableAsBatchAsync (client: CloudTableClient) tableName operations =
+            async {
+                let table = client.GetTableReference tableName
+                let batchOperation = operations |> createBatchOperation
+                let! results = batchOperation |> table.ExecuteBatchAsync |> Async.AwaitTask
+                return results |> Seq.map convertToOperationResult |> Seq.toList
+            }
+
+        let autobatch (operations : Operation<_> seq) = 
+            operations 
+            |> Seq.map (fun o -> o.GetEntity() |> !(TableIdentifier.GetIdentifier), o)
+            |> Seq.groupBy (fun (eId, _) -> eId.PartitionKey)
+            |> Seq.map (fun (pk, ops) -> 
+                let duplicates = 
+                    ops 
+                    |> Seq.countBy (fun (eId, _) -> eId.RowKey) 
+                    |> Seq.filter (fun (rk, count) -> count > 1)
+                    |> Seq.cache
+                if duplicates |> Seq.isEmpty |> not then
+                    let dupStr = duplicates |> Seq.fold (fun str (rk, _) -> str + sprintf "\r\n- '%s'" rk) ""
+                    failwithf "Cannot automatically batch operations because multiple entities addressing the same rows exist for partition '%s' with row keys:%s" pk dupStr
+                
+                let arr = ops |> Seq.map snd |> Seq.toArray
+                let windows = float(arr.Length) / float(MaxBatchSize) |> Math.Ceiling |> int
+                seq { 
+                    for i in 0 .. windows - 1 -> 
+                        arr 
+                        |> Array.window (i * MaxBatchSize) MaxBatchSize 
+                        |> Seq.toList
+                })
+            |> Seq.concat
+            |> Seq.toList
             
         let fromTable (client: CloudTableClient) name (query : EntityQuery<'T>) =
             let table = client.GetTableReference name

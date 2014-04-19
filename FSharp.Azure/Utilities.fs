@@ -2,7 +2,13 @@
 
 open System;
 
-module private Utilities =
+module internal Array = 
+    let window skip take (arr : 'a[]) =
+        seq {
+            for i in skip .. min (skip + take - 1) (arr.Length - 1) do yield arr.[i]
+        }
+
+module internal Utilities =
     open Microsoft.FSharp.Reflection
     
     let inline (|?) (lhs: 'a option) rhs = (if lhs.IsSome then lhs.Value else rhs)
