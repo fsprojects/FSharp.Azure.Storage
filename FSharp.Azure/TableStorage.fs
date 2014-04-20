@@ -369,21 +369,21 @@
             |> Seq.concat
             |> Seq.toList
             
-        let fromTable (client: CloudTableClient) name (query : EntityQuery<'T>) =
-            let table = client.GetTableReference name
+        let fromTable (client: CloudTableClient) tableName (query : EntityQuery<'T>) =
+            let table = client.GetTableReference tableName
             let tableQuery = query.ToTableQuery()
             let resolver = EntityTypeCache.Resolver.Value //Do not inline this otherwise FSharp will delay execution of .Value until the resolver delegate is called
             table.ExecuteQuery<'T * EntityMetadata>(tableQuery, resolver)
 
-        let fromTableSegmented (client: CloudTableClient) name continuationToken (query : EntityQuery<'T>) =
-            let table = client.GetTableReference name
+        let fromTableSegmented (client: CloudTableClient) tableName continuationToken (query : EntityQuery<'T>) =
+            let table = client.GetTableReference tableName
             let tableQuery = query.ToTableQuery()
             let resolver = EntityTypeCache.Resolver.Value //Do not inline this otherwise FSharp will delay execution of .Value until the resolver delegate is called
             let result = table.ExecuteQuerySegmented<'T * EntityMetadata>(tableQuery, resolver, continuationToken |> toNullRef)
             result.Results, result.ContinuationToken |> toOption
 
-        let fromTableSegmentedAsync (client: CloudTableClient) name continuationToken (query : EntityQuery<'T>) =
-            let table = client.GetTableReference name
+        let fromTableSegmentedAsync (client: CloudTableClient) tableName continuationToken (query : EntityQuery<'T>) =
+            let table = client.GetTableReference tableName
             let tableQuery = query.ToTableQuery()
             let resolver = EntityTypeCache.Resolver.Value //Do not inline this otherwise FSharp will delay execution of .Value until the resolver delegate is called
             async {
@@ -391,10 +391,10 @@
                 return result.Results, result.ContinuationToken |> toOption
             }
 
-        let fromTableAsync (client: CloudTableClient) name (query : EntityQuery<'T>) =
+        let fromTableAsync (client: CloudTableClient) tableName (query : EntityQuery<'T>) =
             let rec getSegmentAsync continutationToken resultsList =
                 async {
-                    let! result, furtherContinuation = query |> fromTableSegmentedAsync client name continutationToken
+                    let! result, furtherContinuation = query |> fromTableSegmentedAsync client tableName continutationToken
                     match furtherContinuation with
                     | Some _ -> return! result :: resultsList |> getSegmentAsync furtherContinuation
                     | None -> return result :: resultsList
