@@ -6,7 +6,6 @@
 
         open System.Collections.Generic
         open System.Linq
-        open System.Reflection
         open System.Threading.Tasks
         open Microsoft.FSharp.Linq.QuotationEvaluation
         open Microsoft.FSharp.Quotations
@@ -18,9 +17,18 @@
 
         let MaxBatchSize = 100
 
-        type TableEntityIdentifier = { PartitionKey : string; RowKey : string; }
+        type EntityIdentifier = { PartitionKey : string; RowKey : string; }
         type OperationResult = { HttpStatusCode : int; Etag : string }
         type EntityMetadata = { Etag : string; Timestamp : DateTimeOffset }
+
+        type IEntityIdentifiable = 
+            abstract member GetIdentifier : unit -> EntityIdentifier
+
+        [<AllowNullLiteralAttribute>]
+        type PartitionKeyAttribute () = inherit Attribute()
+        
+        [<AllowNullLiteralAttribute>]
+        type RowKeyAttribute () = inherit Attribute()
 
         type Operation<'T> =
             | Insert of entity : 'T
@@ -40,32 +48,8 @@
                 | Replace (entity, _) -> entity
                 | ForceReplace (entity) -> entity
 
-        type ITableIdentifiable = 
-            abstract member GetIdentifier : unit -> TableEntityIdentifier
-
-        [<AllowNullLiteralAttribute>]
-        type PartitionKeyAttribute () = inherit Attribute()
-        
-        [<AllowNullLiteralAttribute>]
-        type RowKeyAttribute () = inherit Attribute()
-
-
-        let private getPropertyByAttribute<'T, 'TAttr, 'TReturn when 'TAttr :> Attribute and 'TAttr : null>() =
-           let partitionKeyProperties = 
-               typeof<'T>.GetProperties() 
-                   |> Seq.where (fun p -> p.CanRead)
-                   |> Seq.where (fun p -> p.GetCustomAttribute<'TAttr>() |> isNotNull)
-                   |> Seq.toList
-
-           match partitionKeyProperties with
-               | h :: [] when h.PropertyType = typeof<'TReturn> -> h
-               | h :: [] -> failwithf "The property %s on type %s that is marked with %s is not of type %s" h.Name typeof<'T>.Name typeof<'TAttr>.Name typeof<'TReturn>.Name 
-               | h :: t -> failwithf "The type %s contains more than one property with %s" typeof<'T>.Name typeof<'TAttr>.Name
-               | [] -> failwithf "The type %s does not contain a property with %s" typeof<'T>.Name typeof<'TAttr>.Name
-
-
         [<AbstractClass; Sealed>]
-        type TableIdentifier<'T> private () =
+        type EntityIdentiferReader<'T> private () =
             static let buildIdentiferFromAttributesFunc() =
                 let partitionKeyProperty = getPropertyByAttribute<'T, PartitionKeyAttribute, string>()
                 let rowKeyProperty = getPropertyByAttribute<'T, RowKeyAttribute, string>()
@@ -76,12 +60,12 @@
             
                 let recordInitializer = <@ { PartitionKey = %%pk; RowKey = %%rk } @>
 
-                let quotation = Expr.Cast<'T -> TableEntityIdentifier>(Expr.Lambda(var, recordInitializer))
+                let quotation = Expr.Cast<'T -> EntityIdentifier>(Expr.Lambda(var, recordInitializer))
                 quotation.Compile()()
 
             static let defaultGetIdentifier = 
                 match typeof<'T> with
-                | t when typeof<ITableIdentifiable>.IsAssignableFrom t -> fun (e : 'T) -> (box e :?> ITableIdentifiable).GetIdentifier()
+                | t when typeof<IEntityIdentifiable>.IsAssignableFrom t -> fun (e : 'T) -> (box e :?> IEntityIdentifiable).GetIdentifier()
                 | t when typeof<ITableEntity>.IsAssignableFrom t -> fun (e : 'T) -> 
                     let tableEntity = (box e :?> ITableEntity)
                     { PartitionKey = tableEntity.PartitionKey; RowKey = tableEntity.RowKey }
@@ -138,7 +122,7 @@
                         |> dict
 
         [<AbstractClass; Sealed>]
-        type private TableEntityTypeCache<'T> private () = 
+        type private EntityTypeCache<'T> private () = 
             static let tableEntityTypeConstructor = lazy(
                 let ctor = typeof<'T>.GetConstructor([||])
                 if ctor = null then failwithf "Type %s does not have a parameterless constructor" typeof<'T>.Name
@@ -161,7 +145,7 @@
                 entity |> tableOperation
 
             static let createTableOperationFromRecord (tableOperation : ITableEntity -> TableOperation) (record : 'T) etag =
-                let eId = !(TableIdentifier.GetIdentifier) record
+                let eId = !(EntityIdentiferReader.GetIdentifier) record
                 RecordTableEntityWrapper (record, eId, etag) |> tableOperation
 
             static member val Resolver = lazy (
@@ -315,15 +299,15 @@
                 [query; { Filter = ""; TakeCount = Some count };] |> List.reduce (+)
         
 
-        let private convertToTableOperation operation =
+        let convertToTableOperation operation =
             match operation with
-            | Insert (entity) -> TableEntityTypeCache.CreateTableOperation.Value TableOperation.Insert entity null
-            | InsertOrMerge (entity) -> TableEntityTypeCache.CreateTableOperation.Value TableOperation.InsertOrMerge entity null
-            | InsertOrReplace (entity) -> TableEntityTypeCache.CreateTableOperation.Value TableOperation.InsertOrReplace entity null
-            | Merge (entity, etag) -> TableEntityTypeCache.CreateTableOperation.Value TableOperation.Merge entity etag
-            | ForceMerge (entity) -> TableEntityTypeCache.CreateTableOperation.Value TableOperation.Merge entity "*"
-            | Replace (entity, etag) -> TableEntityTypeCache.CreateTableOperation.Value TableOperation.Replace entity etag
-            | ForceReplace (entity) -> TableEntityTypeCache.CreateTableOperation.Value TableOperation.Replace entity "*"
+            | Insert (entity) -> EntityTypeCache.CreateTableOperation.Value TableOperation.Insert entity null
+            | InsertOrMerge (entity) -> EntityTypeCache.CreateTableOperation.Value TableOperation.InsertOrMerge entity null
+            | InsertOrReplace (entity) -> EntityTypeCache.CreateTableOperation.Value TableOperation.InsertOrReplace entity null
+            | Merge (entity, etag) -> EntityTypeCache.CreateTableOperation.Value TableOperation.Merge entity etag
+            | ForceMerge (entity) -> EntityTypeCache.CreateTableOperation.Value TableOperation.Merge entity "*"
+            | Replace (entity, etag) -> EntityTypeCache.CreateTableOperation.Value TableOperation.Replace entity etag
+            | ForceReplace (entity) -> EntityTypeCache.CreateTableOperation.Value TableOperation.Replace entity "*"
 
         let private createBatchOperation operations = 
             let batchOperation = TableBatchOperation()
@@ -332,6 +316,7 @@
 
         let private convertToOperationResult (result : TableResult) = 
             { HttpStatusCode = result.HttpStatusCode; Etag = result.Etag }
+
 
         let inTable (client: CloudTableClient) tableName operation = 
             let table = client.GetTableReference tableName
@@ -361,7 +346,7 @@
 
         let autobatch (operations : Operation<_> seq) = 
             operations 
-            |> Seq.map (fun o -> o.GetEntity() |> !(TableIdentifier.GetIdentifier), o)
+            |> Seq.map (fun o -> o.GetEntity() |> !(EntityIdentiferReader.GetIdentifier), o)
             |> Seq.groupBy (fun (eId, _) -> eId.PartitionKey)
             |> Seq.map (fun (pk, ops) -> 
                 let duplicates = 
@@ -387,20 +372,20 @@
         let fromTable (client: CloudTableClient) name (query : EntityQuery<'T>) =
             let table = client.GetTableReference name
             let tableQuery = query.ToTableQuery()
-            let resolver = TableEntityTypeCache.Resolver.Value //Do not inline this otherwise FSharp will delay execution of .Value until the resolver delegate is called
+            let resolver = EntityTypeCache.Resolver.Value //Do not inline this otherwise FSharp will delay execution of .Value until the resolver delegate is called
             table.ExecuteQuery<'T * EntityMetadata>(tableQuery, resolver)
 
         let fromTableSegmented (client: CloudTableClient) name continuationToken (query : EntityQuery<'T>) =
             let table = client.GetTableReference name
             let tableQuery = query.ToTableQuery()
-            let resolver = TableEntityTypeCache.Resolver.Value //Do not inline this otherwise FSharp will delay execution of .Value until the resolver delegate is called
+            let resolver = EntityTypeCache.Resolver.Value //Do not inline this otherwise FSharp will delay execution of .Value until the resolver delegate is called
             let result = table.ExecuteQuerySegmented<'T * EntityMetadata>(tableQuery, resolver, continuationToken |> toNullRef)
             result.Results, result.ContinuationToken |> toOption
 
         let fromTableSegmentedAsync (client: CloudTableClient) name continuationToken (query : EntityQuery<'T>) =
             let table = client.GetTableReference name
             let tableQuery = query.ToTableQuery()
-            let resolver = TableEntityTypeCache.Resolver.Value //Do not inline this otherwise FSharp will delay execution of .Value until the resolver delegate is called
+            let resolver = EntityTypeCache.Resolver.Value //Do not inline this otherwise FSharp will delay execution of .Value until the resolver delegate is called
             async {
                 let! result = table.ExecuteQuerySegmentedAsync<'T * EntityMetadata>(tableQuery, resolver, continuationToken |> toNullRef) |> Async.AwaitTask
                 return result.Results, result.ContinuationToken |> toOption

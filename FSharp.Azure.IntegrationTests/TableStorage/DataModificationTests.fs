@@ -13,7 +13,7 @@ module DataModification =
         { Name: string
           Platform: string
           Developer : string }
-        interface ITableIdentifiable with
+        interface IEntityIdentifiable with
             member g.GetIdentifier() = 
                 { PartitionKey = g.Developer; RowKey = g.Name }
 

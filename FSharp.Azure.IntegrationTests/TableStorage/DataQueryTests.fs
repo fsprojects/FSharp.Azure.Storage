@@ -15,7 +15,7 @@ module DataQuery =
           Developer : string
           HasMultiplayer: bool }
           
-          interface ITableIdentifiable with
+          interface IEntityIdentifiable with
             member g.GetIdentifier() = 
                 { PartitionKey = g.Developer; RowKey = g.Name + "-" + g.Platform }
 
