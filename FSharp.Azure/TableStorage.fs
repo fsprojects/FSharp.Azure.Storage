@@ -17,18 +17,18 @@
 
         let MaxBatchSize = 100
 
-        type EntityIdentifier = { PartitionKey : string; RowKey : string; }
-        type OperationResult = { HttpStatusCode : int; Etag : string }
-        type EntityMetadata = { Etag : string; Timestamp : DateTimeOffset }
-
-        type IEntityIdentifiable = 
-            abstract member GetIdentifier : unit -> EntityIdentifier
-
         [<AllowNullLiteralAttribute>]
         type PartitionKeyAttribute () = inherit Attribute()
         
         [<AllowNullLiteralAttribute>]
         type RowKeyAttribute () = inherit Attribute()
+
+        type EntityIdentifier = { [<PartitionKey>] PartitionKey : string; [<RowKey>] RowKey : string; }
+        type OperationResult = { HttpStatusCode : int; Etag : string }
+        type EntityMetadata = { Etag : string; Timestamp : DateTimeOffset }
+
+        type IEntityIdentifiable = 
+            abstract member GetIdentifier : unit -> EntityIdentifier
 
         type Operation<'T> =
             | Insert of entity : 'T
@@ -38,6 +38,8 @@
             | ForceReplace of entity : 'T
             | Merge of entity : 'T * etag : string
             | ForceMerge of entity : 'T
+            | Delete of entity : 'T * etag : string
+            | ForceDelete of entity : 'T
             member this.GetEntity() = 
                 match this with
                 | Insert (entity) -> entity
@@ -47,6 +49,8 @@
                 | ForceMerge (entity) -> entity
                 | Replace (entity, _) -> entity
                 | ForceReplace (entity) -> entity
+                | Delete (entity, etag) -> entity
+                | ForceDelete (entity) -> entity
 
         [<AbstractClass; Sealed>]
         type EntityIdentiferReader<'T> private () =
@@ -308,6 +312,8 @@
             | ForceMerge (entity) -> EntityTypeCache.CreateTableOperation.Value TableOperation.Merge entity "*"
             | Replace (entity, etag) -> EntityTypeCache.CreateTableOperation.Value TableOperation.Replace entity etag
             | ForceReplace (entity) -> EntityTypeCache.CreateTableOperation.Value TableOperation.Replace entity "*"
+            | Delete (entity, etag) -> EntityTypeCache.CreateTableOperation.Value TableOperation.Delete entity etag
+            | ForceDelete (entity) -> EntityTypeCache.CreateTableOperation.Value TableOperation.Delete entity "*"
 
         let private createBatchOperation operations = 
             let batchOperation = TableBatchOperation()

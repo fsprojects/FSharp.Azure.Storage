@@ -287,6 +287,70 @@ module DataModification =
 
 
         [<Fact>]
+        let ``can delete a record`` () =
+            let game = 
+                { Name = "Halo 4"
+                  Platform = "Xbox 360"
+                  Developer = "343 Industries"
+                  HasMultiplayer = true }
+
+            let originalResult = game |> Insert |> inGameTable
+
+            let result = (game, originalResult.Etag) |> Delete |> inGameTable
+            result.HttpStatusCode |> should equal 204
+            
+            Query.all<Game> 
+            |> Query.where <@ fun g s -> s.PartitionKey = game.Developer && s.RowKey = game.Name @>
+            |> fromTable tableClient gameTableName
+            |> Seq.isEmpty
+            |> should equal true
+
+
+        [<Fact>]
+        let ``can force delete a record`` () =
+            let game = 
+                { Name = "Halo 4"
+                  Platform = "Xbox 360"
+                  Developer = "343 Industries"
+                  HasMultiplayer = true }
+
+            let originalResult = game |> Insert |> inGameTable
+
+            let result = game |> ForceDelete |> inGameTable
+            result.HttpStatusCode |> should equal 204
+            
+            Query.all<Game> 
+            |> Query.where <@ fun g s -> s.PartitionKey = game.Developer && s.RowKey = game.Name @>
+            |> fromTable tableClient gameTableName
+            |> Seq.isEmpty
+            |> should equal true
+
+
+        [<Fact>]
+        let ``can delete a record using only PK and RK`` () =
+            let game = 
+                { Name = "Halo 4"
+                  Platform = "Xbox 360"
+                  Developer = "343 Industries"
+                  HasMultiplayer = true }
+
+            let originalResult = game |> Insert |> inGameTable
+
+            let result = 
+                { EntityIdentifier.PartitionKey = game.Developer; RowKey = game.Name } 
+                |> ForceDelete 
+                |> inGameTable
+
+            result.HttpStatusCode |> should equal 204
+            
+            Query.all<Game> 
+            |> Query.where <@ fun g s -> s.PartitionKey = game.Developer && s.RowKey = game.Name @>
+            |> fromTable tableClient gameTableName
+            |> Seq.isEmpty
+            |> should equal true
+
+
+        [<Fact>]
         let ``can insert a new table entity`` () =
             let game = 
                 GameTableEntity (Name = "Halo 4", 
