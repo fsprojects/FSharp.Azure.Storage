@@ -23,6 +23,13 @@ module DataModification =
           [<PartitionKey>] Developer : string
           HasMultiplayer: bool }
 
+    type PureRecord =
+        { SuchPure : string
+          VeryClean : string
+          Wow : bool }
+
+    let getPureIdentifier p = { PartitionKey = p.SuchPure; RowKey = p.VeryClean }
+
     type TypeWithSystemProps = 
         { [<PartitionKey>] PartitionKey : string; 
           [<RowKey>] RowKey : string; 
@@ -40,7 +47,8 @@ module DataModification =
 
 
     type Tests() = 
-    
+        static do EntityIdentiferReader.GetIdentifier <- getPureIdentifier
+
         let account = CloudStorageAccount.Parse "UseDevelopmentStorage=true;"
         let tableClient = account.CreateCloudTableClient()
         let gameTableName = "TestsGame"
@@ -466,5 +474,14 @@ module DataModification =
 
             (fun () -> games |> Seq.map Insert |> autobatch |> ignore)
                 |> should throw typeof<Exception>
-            
+           
+        [<Fact>] 
+        let ``performing an operation on a type that uses a custom EntityIdentiferReader function works`` () = 
+            let doge =
+                { SuchPure = "MuchWin"
+                  VeryClean = "SoShiny"
+                  Wow = true }
 
+            let result = doge |> Insert |> inGameTable
+
+            result.HttpStatusCode |> should equal 204

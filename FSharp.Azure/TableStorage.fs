@@ -67,15 +67,17 @@
                 let quotation = Expr.Cast<'T -> EntityIdentifier>(Expr.Lambda(var, recordInitializer))
                 quotation.Compile()()
 
-            static let defaultGetIdentifier = 
+            static let defaultGetIdentifier = lazy(
                 match typeof<'T> with
                 | t when typeof<IEntityIdentifiable>.IsAssignableFrom t -> fun (e : 'T) -> (box e :?> IEntityIdentifiable).GetIdentifier()
                 | t when typeof<ITableEntity>.IsAssignableFrom t -> fun (e : 'T) -> 
                     let tableEntity = (box e :?> ITableEntity)
                     { PartitionKey = tableEntity.PartitionKey; RowKey = tableEntity.RowKey }
-                | _ -> buildIdentiferFromAttributesFunc()
+                | _ -> buildIdentiferFromAttributesFunc())
                     
-            static member GetIdentifier = ref defaultGetIdentifier
+            static let getIdentifier = ref (fun g -> defaultGetIdentifier.Value g)
+
+            static member GetIdentifier with get() = !(getIdentifier) and set fn = getIdentifier := fn
 
 
         type private RecordTableEntityWrapper<'T>(record : 'T, identifier, etag) =
@@ -149,7 +151,7 @@
                 entity |> tableOperation
 
             static let createTableOperationFromRecord (tableOperation : ITableEntity -> TableOperation) (record : 'T) etag =
-                let eId = !(EntityIdentiferReader.GetIdentifier) record
+                let eId = EntityIdentiferReader.GetIdentifier record
                 RecordTableEntityWrapper (record, eId, etag) |> tableOperation
 
             static member val Resolver = lazy (
@@ -352,7 +354,7 @@
 
         let autobatch (operations : Operation<_> seq) = 
             operations 
-            |> Seq.map (fun o -> o.GetEntity() |> !(EntityIdentiferReader.GetIdentifier), o)
+            |> Seq.map (fun o -> o.GetEntity() |> EntityIdentiferReader.GetIdentifier, o)
             |> Seq.groupBy (fun (eId, _) -> eId.PartitionKey)
             |> Seq.map (fun (pk, ops) -> 
                 let duplicates = 
