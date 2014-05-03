@@ -84,7 +84,7 @@ let multiplayerValveGames =
 ```
 
 ### Further Information
-For further documentation and example, please visit the [wiki][2].
+For further documentation and examples, please visit the [wiki][2].
 
 [2]: https://github.com/daniel-chambers/FSharp.Azure/wiki
 
