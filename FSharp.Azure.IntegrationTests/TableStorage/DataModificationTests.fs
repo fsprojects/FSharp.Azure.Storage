@@ -9,6 +9,12 @@ open FsUnit.Xunit
 
 module DataModification = 
     
+    type GameWithOptions = 
+        { [<RowKey>] Name: string
+          Platform: string option
+          [<PartitionKey>] Developer : string
+          HasMultiplayer: bool option }
+
     type GameSummary = 
         { Name: string
           Platform: string
@@ -483,5 +489,17 @@ module DataModification =
                   Wow = true }
 
             let result = doge |> Insert |> inGameTable
+
+            result.HttpStatusCode |> should equal 204
+
+        [<Fact>]
+        let ``inserting a record with option type fields works`` () =
+            let game = 
+                { GameWithOptions.Name = "Halo 4"
+                  Platform = None
+                  Developer = "343 Industries"
+                  HasMultiplayer = None }
+
+            let result = game |> Insert |> inGameTable
 
             result.HttpStatusCode |> should equal 204

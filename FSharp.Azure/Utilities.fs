@@ -48,3 +48,39 @@ module internal Utilities =
         | h :: [] -> failwithf "The property %s on type %s that is marked with %s is not of type %s" h.Name typeof<'T>.Name typeof<'TAttr>.Name typeof<'TReturn>.Name 
         | h :: t -> failwithf "The type %s contains more than one property with %s" typeof<'T>.Name typeof<'TAttr>.Name
         | [] -> failwithf "The type %s does not contain a property with %s" typeof<'T>.Name typeof<'TAttr>.Name
+
+    
+    let inline private isOptionType (t : Type) =
+        t.IsGenericType && t.GetGenericTypeDefinition() = typedefof<obj option>
+
+    let getUnderlyingTypeIfOption (t : Type) = 
+        if t |> isOptionType then
+            t.GetGenericArguments().[0]
+        else
+            t
+
+    let unwrapIfOption (o : obj) =
+        match o with
+        | null -> null
+        | :? (string option) as opt -> opt.Value :> obj
+        | :? (byte[] option) as opt -> opt.Value :> obj
+        | :? (bool option) as opt -> opt.Value :> obj
+        | :? (DateTimeOffset option) as opt -> opt.Value :> obj
+        | :? (double option) as opt -> opt.Value :> obj
+        | :? (Guid option) as opt -> opt.Value :> obj
+        | :? (int option) as opt -> opt.Value :> obj
+        | other -> other
+
+    let wrapIfOption (t : Type) (o : obj) =
+        if t |> isOptionType then
+            match o with
+            | null -> null
+            | :? string as v -> Some v :> obj
+            | :? (byte[]) as v -> Some v :> obj
+            | :? bool as v -> Some v :> obj
+            | :? DateTimeOffset as v -> Some v :> obj
+            | :? double as v -> Some v :> obj
+            | :? Guid as v -> Some v :> obj
+            | :? int as v -> Some v :> obj
+            | other -> other
+        else o

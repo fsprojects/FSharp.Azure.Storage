@@ -9,6 +9,17 @@ open FsUnit.Xunit
 
 module DataQuery =
 
+    type GameWithOptions = 
+        { Name: string
+          Platform: string
+          Developer : string
+          HasMultiplayer: bool option
+          Notes : string option }
+          
+          interface IEntityIdentifiable with
+            member g.GetIdentifier() = 
+                { PartitionKey = g.Developer; RowKey = g.Name + "-" + g.Platform }
+
     type Game = 
         { Name: string
           Platform: string
@@ -65,8 +76,8 @@ module DataQuery =
         do gameTable.DeleteIfExists() |> ignore
         do gameTable.Create() |> ignore
 
-        let fromGameTable = fromTable tableClient gameTableName
-        let fromGameTableAsync = fromTableAsync tableClient gameTableName
+        let fromGameTable q = fromTable tableClient gameTableName q
+        let fromGameTableAsync q = fromTableAsync tableClient gameTableName q
 
         static let data = [
             { Developer = "343 Industries"; Name = "Halo 4"; Platform = "Xbox 360"; HasMultiplayer = true }
@@ -298,3 +309,45 @@ module DataQuery =
             (fun () -> Query.all<NonTableEntityClass> |> fromTable tableClient gameTableName |> ignore)
                 |> should throw typeof<Exception>
 
+        [<Fact>]
+        let ``querying for a record that has option type fields works``() = 
+            let game = 
+                { Name = "Transistor"
+                  Platform = "PC"
+                  Developer = "Supergiant Games"
+                  HasMultiplayer = Some false 
+                  Notes = None }
+
+            let result = game |> Insert |> inTable tableClient gameTableName
+            result.HttpStatusCode |> should equal 204
+
+            let retrievedGame = 
+                Query.all<GameWithOptions> 
+                |> Query.where <@ fun g s -> s.PartitionKey = game.Developer && s.RowKey = game.Name + "-" + game.Platform @>
+                |> fromGameTable
+                |> Seq.head 
+                |> fst
+
+            game = retrievedGame |> should equal true
+
+        
+        [<Fact>]
+        let ``querying for a record that has option type fields works when filtering by the option-types properties``() = 
+            let game = 
+                { Name = "Transistor"
+                  Platform = "PC"
+                  Developer = "Supergiant Games"
+                  HasMultiplayer = Some false 
+                  Notes = Some "From the same studio that made Bastion" }
+
+            let result = game |> Insert |> inTable tableClient gameTableName
+            result.HttpStatusCode |> should equal 204
+
+            let retrievedGame = 
+                Query.all<GameWithOptions> 
+                |> Query.where <@ fun g s -> g.HasMultiplayer = Some false && g.Notes = game.Notes @>
+                |> fromGameTable
+                |> Seq.head 
+                |> fst
+
+            game = retrievedGame |> should equal true

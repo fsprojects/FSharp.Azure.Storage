@@ -9,6 +9,12 @@ open FsUnit.Xunit
 
 module QueryExpression = 
     
+    type GameWithOptions = 
+        { Name: string
+          Platform: string option
+          Developer : string
+          HasMultiplayer: bool option }
+
     type Game = 
         { Name: string
           Platform: string
@@ -189,6 +195,23 @@ module QueryExpression =
 
             query.Filter |> should equal "not ((Developer eq 'Valve') and (Name eq 'Portal'))"
             query.TakeCount.IsNone |> should equal true
+
+        [<Fact>]
+        let ``where query allows comparison against option types`` () =
+            let query = 
+                Query.all<GameWithOptions> 
+                |> Query.where <@ fun g s -> g.Platform = Some "Valve" && g.HasMultiplayer = Some true @>
+
+            query.Filter |> should equal "(Platform eq 'Valve') and (HasMultiplayer eq true)"
+            query.TakeCount.IsNone |> should equal true
+
+        [<Fact>]
+        let ``where query does not allow comparison against option types with None`` () =
+            (fun () ->
+                Query.all<GameWithOptions> 
+                |> Query.where <@ fun g s -> (g.Platform = None && g.HasMultiplayer = None) @>
+                |> ignore)
+                |> should throw typeof<Exception>
 
         [<Fact>]
         let ``multiple where queries are anded together`` () = 

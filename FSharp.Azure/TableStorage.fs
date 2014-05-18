@@ -96,9 +96,9 @@
                             | Some prop -> 
                                 match prop.PropertyAsObject with
                                 | null -> runtimeGetUncheckedDefault f.PropertyType
-                                | value when value.GetType() <> f.PropertyType -> 
+                                | value when value.GetType() <> (getUnderlyingTypeIfOption f.PropertyType) -> 
                                     failwithf "The property %s on type %s of type %s has deserialized as the incorrect type %s" f.Name typeof<'T>.Name f.PropertyType.Name (value.GetType().Name)
-                                | value -> value
+                                | value -> value |> wrapIfOption f.PropertyType
                             | None -> 
                                 match f.Name with
                                 | "PartitionKey" when f.PropertyType = typeof<string> -> pk :> obj
@@ -122,7 +122,7 @@
                 member this.WriteEntity(operationContext) = 
                     record 
                         |> recordReader
-                        |> Seq.map EntityProperty.CreateEntityPropertyFromObject 
+                        |> Seq.map (unwrapIfOption >> EntityProperty.CreateEntityPropertyFromObject)
                         |> Seq.zip (recordFields |> Seq.map (fun p -> p.Name))
                         |> Seq.filter (fun (name, _) -> name <> "PartitionKey" && name <> "RowKey")
                         |> dict
@@ -255,17 +255,26 @@
                 | expr when expr.GetFreeVars().Any() -> failwithf "Cannot evaluate %A to a comparison value as it contains free variables" expr
                 | expr -> Some(ComparisonValue (expr.EvalUntyped()))
 
-            let private generateFilterCondition type' propertyName op (value : obj) = 
-               match type' with
-                | t when t = typeof<string> -> TableQuery.GenerateFilterCondition (propertyName, op |> toOperator, value :?> string)
-                | t when t = typeof<byte[]> -> TableQuery.GenerateFilterConditionForBinary (propertyName, op |> toOperator, value :?> byte[])
-                | t when t = typeof<bool> -> TableQuery.GenerateFilterConditionForBool (propertyName, op |> toOperator, value :?> bool)
-                | t when t = typeof<DateTimeOffset> -> TableQuery.GenerateFilterConditionForDate (propertyName, op |> toOperator, value :?> DateTimeOffset)
-                | t when t = typeof<double> -> TableQuery.GenerateFilterConditionForDouble (propertyName, op |> toOperator, value :?> double)
-                | t when t = typeof<Guid> -> TableQuery.GenerateFilterConditionForGuid (propertyName, op |> toOperator, value :?> Guid)
-                | t when t = typeof<int> -> TableQuery.GenerateFilterConditionForInt (propertyName, op |> toOperator, value :?> int)
-                | t when t = typeof<int64> -> TableQuery.GenerateFilterConditionForLong (propertyName, op |> toOperator, value :?> int64)
-                | t -> failwithf "Unexpected property type %s for property %s" t.Name propertyName
+            let private generateFilterCondition (type' : Type) propertyName op (value : obj) = 
+               match value with
+               | null -> failwithf "Null comparison is not supported by table storage (property: %s)" propertyName
+               | :? string as v -> TableQuery.GenerateFilterCondition (propertyName, op |> toOperator, v)
+               | :? (string option) as v -> TableQuery.GenerateFilterCondition (propertyName, op |> toOperator, v.Value)
+               | :? (byte[]) as v -> TableQuery.GenerateFilterConditionForBinary (propertyName, op |> toOperator, v)
+               | :? (byte[] option) as v -> TableQuery.GenerateFilterConditionForBinary (propertyName, op |> toOperator, v.Value)
+               | :? bool as v -> TableQuery.GenerateFilterConditionForBool (propertyName, op |> toOperator, v)
+               | :? (bool option) as v -> TableQuery.GenerateFilterConditionForBool (propertyName, op |> toOperator, v.Value)
+               | :? DateTimeOffset as v -> TableQuery.GenerateFilterConditionForDate (propertyName, op |> toOperator, v)
+               | :? (DateTimeOffset option) as v -> TableQuery.GenerateFilterConditionForDate (propertyName, op |> toOperator, v.Value)
+               | :? double as v -> TableQuery.GenerateFilterConditionForDouble (propertyName, op |> toOperator, v)
+               | :? (double option) as v -> TableQuery.GenerateFilterConditionForDouble (propertyName, op |> toOperator, v.Value)
+               | :? Guid as v -> TableQuery.GenerateFilterConditionForGuid (propertyName, op |> toOperator, v)
+               | :? (Guid option) as v -> TableQuery.GenerateFilterConditionForGuid (propertyName, op |> toOperator, v.Value)
+               | :? int as v -> TableQuery.GenerateFilterConditionForInt (propertyName, op |> toOperator, v)
+               | :? (int option) as v -> TableQuery.GenerateFilterConditionForInt (propertyName, op |> toOperator, v.Value)
+               | :? int64 as v -> TableQuery.GenerateFilterConditionForLong (propertyName, op |> toOperator, v)
+               | :? (int64 option) as v -> TableQuery.GenerateFilterConditionForLong (propertyName, op |> toOperator, v.Value)
+               | _ -> failwithf "Unexpected property type %s for property %s" type'.Name propertyName
 
             let private isPropertyComparisonAgainstBool expr =
                 match expr with
