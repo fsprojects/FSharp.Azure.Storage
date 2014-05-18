@@ -8,6 +8,7 @@
     <owners>Daniel Chambers &amp; Contributors</owners>
     <projectUrl>https://github.com/daniel-chambers/fsharp.azure</projectUrl>
     <licenseUrl>https://github.com/daniel-chambers/FSharp.Azure/blob/master/LICENCE.txt</licenseUrl>
+    <iconUrl>http://bit.ly/fsharpazurelogo</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>A library that provides an idiomatic F# API for Microsoft Azure services.</description>
     <releaseNotes>Release version. Support for option-typed record fields.</releaseNotes>
