@@ -10,7 +10,7 @@
     <licenseUrl>https://github.com/daniel-chambers/FSharp.Azure/blob/master/LICENCE.txt</licenseUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>A library that provides an idiomatic F# API for Microsoft Azure services.</description>
-    <releaseNotes>Beta release that adds the ability to perform batch operations. Contains breaking changes from the alpha.</releaseNotes>
+    <releaseNotes>Release version. Support for option-typed record fields.</releaseNotes>
     <copyright>Copyright 2014</copyright>
     <tags>fsharp f# microsoft azure table storage</tags>
   </metadata>

@@ -12,7 +12,7 @@ async support and generally write in a functional style.
 
 NuGet
 -----
-`Install-Package FSharp.Azure -pre`
+`Install-Package FSharp.Azure`
 
 A Quick Taster
 --------------
