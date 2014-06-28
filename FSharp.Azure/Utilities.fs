@@ -2,11 +2,14 @@
 
 open System;
 
-module internal Array = 
-    let window skip take (arr : 'a[]) =
-        seq {
-            for i in skip .. min (skip + take - 1) (arr.Length - 1) do yield arr.[i]
-        }
+module internal Seq =
+    let split n =
+        Seq.fold (fun (count, currSeq, seqs) item ->
+            if count = n
+            then 1, item |> Seq.singleton, currSeq |> Seq.singleton |> Seq.append seqs
+            else count + 1, item |> Seq.singleton |> Seq.append currSeq, seqs)
+            (0, Seq.empty, Seq.empty)
+        >> (fun (_, currSeq, seqs) -> currSeq |> Seq.singleton |> Seq.append seqs)
 
 module internal Utilities =
     

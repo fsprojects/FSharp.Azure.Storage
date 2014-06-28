@@ -96,17 +96,19 @@ module DataQuery =
             { Developer = "Crystal Dynamics"; Name = "Tomb Raider"; Platform = "PS4"; HasMultiplayer = true } 
         ]
 
-        let insertInParallel tableName items = 
-            items 
-            |> Seq.map (fun r -> r |> Insert) 
-            |> autobatch
-            |> Seq.map (fun b -> b |> inTableAsBatchAsync tableClient tableName)
-            |> Async.ParallelByDegree 4 
-            |> Async.RunSynchronously
-            |> Seq.concat
-            |> Seq.iter (fun r -> r.HttpStatusCode |> should equal 204)
+        let processInParallel tableName operation = 
+            Seq.map operation
+            >> autobatch
+            >> Seq.map (inTableAsBatchAsync tableClient tableName)
+            >> Async.ParallelByDegree 4 
+            >> Async.RunSynchronously
+            >> Seq.concat
 
-        do data |> insertInParallel gameTableName |> ignore
+        let insertInParallelAndCheckSuccess tableName =
+            processInParallel tableName Insert
+            >> Seq.iter (fun r -> r.HttpStatusCode |> should equal 204)
+        
+        do data |> insertInParallelAndCheckSuccess gameTableName
 
         let verifyMetadata metadata = 
             metadata |> Seq.iter (fun (_, m) ->
@@ -220,7 +222,7 @@ module DataQuery =
                     yield { PK = "PK" + partition.ToString(); RK = "RK" + row.ToString() }
                 }
                 |> Array.ofSeq
-            do rows |> insertInParallel simpleTableName
+            do rows |> insertInParallelAndCheckSuccess simpleTableName
             rows
 
         [<Fact>]

@@ -52,6 +52,8 @@
                 | Delete (entity, etag) -> entity
                 | ForceDelete (entity) -> entity
 
+        let getOperationEntity (op : Operation<_>) = op.GetEntity()
+
         [<AbstractClass; Sealed>]
         type EntityIdentiferReader<'T> private () =
             static let buildIdentiferFromAttributesFunc() =
@@ -361,28 +363,27 @@
                 return results |> Seq.map convertToOperationResult |> Seq.toList
             }
 
-        let autobatch (operations : Operation<_> seq) = 
+        let private validateNoDuplicateRowKeys pk ops =
+            let duplicates = 
+                ops 
+                |> Seq.countBy (fun (eId, _) -> eId.RowKey) 
+                |> Seq.filter (fun (rk, count) -> count > 1)
+                |> Seq.cache
+            if duplicates |> Seq.isEmpty |> not then
+                let dupStr = duplicates |> Seq.fold (fun str (rk, _) -> str + sprintf "\r\n- '%s'" rk) ""
+                failwithf "Cannot automatically batch operations because multiple entities addressing the same rows exist for partition '%s' with row keys:%s" pk dupStr
+            else ops
+
+        let autobatch operations = 
             operations 
-            |> Seq.map (fun o -> o.GetEntity() |> EntityIdentiferReader.GetIdentifier, o)
+            |> Seq.map (fun o -> o |> getOperationEntity |> EntityIdentiferReader.GetIdentifier, o)
             |> Seq.groupBy (fun (eId, _) -> eId.PartitionKey)
             |> Seq.map (fun (pk, ops) -> 
-                let duplicates = 
-                    ops 
-                    |> Seq.countBy (fun (eId, _) -> eId.RowKey) 
-                    |> Seq.filter (fun (rk, count) -> count > 1)
-                    |> Seq.cache
-                if duplicates |> Seq.isEmpty |> not then
-                    let dupStr = duplicates |> Seq.fold (fun str (rk, _) -> str + sprintf "\r\n- '%s'" rk) ""
-                    failwithf "Cannot automatically batch operations because multiple entities addressing the same rows exist for partition '%s' with row keys:%s" pk dupStr
-                
-                let arr = ops |> Seq.map snd |> Seq.toArray
-                let windows = float(arr.Length) / float(MaxBatchSize) |> Math.Ceiling |> int
-                seq { 
-                    for i in 0 .. windows - 1 -> 
-                        arr 
-                        |> Array.window (i * MaxBatchSize) MaxBatchSize 
-                        |> Seq.toList
-                })
+                ops
+                |> validateNoDuplicateRowKeys pk
+                |> Seq.map snd 
+                |> Seq.split MaxBatchSize 
+                |> Seq.map Seq.toList)
             |> Seq.concat
             |> Seq.toList
             
