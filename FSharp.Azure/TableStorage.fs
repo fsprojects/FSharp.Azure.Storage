@@ -6,6 +6,7 @@ module TableStorage =
 
     open System.Collections.Generic
     open System.Linq
+    open System.Reflection
     open Microsoft.FSharp.Linq.QuotationEvaluation
     open Microsoft.FSharp.Quotations
     open Microsoft.FSharp.Quotations.Patterns
@@ -107,6 +108,8 @@ module TableStorage =
                 |> Seq.toArray
             (recordWriter propValues), { Etag = etag; Timestamp = timestamp }
 
+        static member RecordFields = recordFields
+
         interface ITableEntity with
             member val PartitionKey : string = identifier.PartitionKey with get, set
             member val RowKey : string = identifier.RowKey with get, set
@@ -151,6 +154,24 @@ module TableStorage =
             let eId = EntityIdentiferReader.GetIdentifier record
             RecordTableEntityWrapper (record, eId, etag) |> tableOperation
 
+        static member val PropertyNames = lazy (
+            let getTableEntityProperty (p : PropertyInfo) = 
+                match p.GetCustomAttribute<IgnorePropertyAttribute>() with
+                | null when p.Name <> "ETag" -> Some (p.Name) //ETag is not an entity property to be queried
+                | _ -> None
+
+            match typeof<'T> with
+            | t when typeof<ITableEntity>.IsAssignableFrom t -> 
+                t.GetProperties()
+                |> Seq.choose getTableEntityProperty
+                |> Set.ofSeq
+            | t when FSharpType.IsRecord t -> 
+                RecordTableEntityWrapper<'T>.RecordFields 
+                |> Seq.map (fun p -> p.Name) 
+                |> Set.ofSeq
+            | t -> failwithf "Type %s must be either an ITableEntity or an F# record type" t.Name
+            )
+
         static member val Resolver = lazy (
             match typeof<'T> with
             | t when typeof<ITableEntity>.IsAssignableFrom t -> resolveTableEntity
@@ -165,9 +186,12 @@ module TableStorage =
 
     type EntityQuery<'T> = 
         { Filter : string
-          TakeCount : int option }
+          TakeCount : int option
+          SelectColumns : string Set }
         static member get_Zero() : EntityQuery<'T> = 
-            { Filter = ""; TakeCount = None }
+            { Filter = "" 
+              TakeCount = None
+              SelectColumns = EntityTypeCache<'T>.PropertyNames.Value }
         static member (+) (left : EntityQuery<'T>, right : EntityQuery<'T>) =
             let filter =
                 match left.Filter, right.Filter with
@@ -181,11 +205,15 @@ module TableStorage =
                 | Some l, None -> Some l
                 | None, Some r -> Some r
                 | None, None -> None
+            let selectColumns = left.SelectColumns |> Set.intersect right.SelectColumns
 
-            { Filter = filter; TakeCount = takeCount }
+            { Filter = filter; TakeCount = takeCount; SelectColumns = selectColumns }
 
         member this.ToTableQuery() = 
-            TableQuery (FilterString = this.Filter, TakeCount = (this.TakeCount |> toNullable))
+            TableQuery (
+                FilterString = this.Filter, 
+                TakeCount = (this.TakeCount |> toNullable),
+                SelectColumns = (this.SelectColumns |> Set.toArray))
                 
 
     module Query = 
@@ -305,10 +333,10 @@ module TableStorage =
         let all<'T> : EntityQuery<'T> = EntityQuery.get_Zero()
 
         let where (expr : Expr<'T -> SystemProperties -> bool>) (query : EntityQuery<'T>) = 
-            [query; { Filter = expr |> makePropertyFilter; TakeCount = None };] |> List.reduce (+)
+            [ query; { EntityQuery<'T>.get_Zero() with Filter = expr |> makePropertyFilter } ] |> List.reduce (+)
 
         let take count (query : EntityQuery<'T>) =
-            [query; { Filter = ""; TakeCount = Some count };] |> List.reduce (+)
+            [ query; { EntityQuery<'T>.get_Zero() with TakeCount = Some count } ] |> List.reduce (+)
         
 
     let convertToTableOperation operation =

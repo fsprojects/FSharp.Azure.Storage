@@ -66,6 +66,32 @@ module DataQuery =
                 |> Seq.choose (fun o -> match o with | null -> None | o -> Some (o.GetHashCode()))
                 |> Seq.reduce (^^^)
 
+    type GameTableEntityWithIgnoredProperty() = 
+        inherit Microsoft.WindowsAzure.Storage.Table.TableEntity()
+        member val Name : string = null with get,set
+        member val Platform : string = null with get,set
+        member val Developer : string = null with get,set
+        [<IgnoreProperty>]
+        member val HasMultiplayer : bool = false with get,set
+
+        override this.Equals other = 
+            match other with
+            | :? Game as game ->
+                this.Name = game.Name && this.Platform = game.Platform && 
+                this.Developer = game.Developer //Don't compare HasMultiplayer because we're expecting it to not be read back from table storage
+            | :? GameTableEntity as game ->
+                this.Name = game.Name && this.Platform = game.Platform && 
+                this.Developer = game.Developer && this.HasMultiplayer = game.HasMultiplayer &&
+                this.PartitionKey = game.PartitionKey && this.RowKey = game.RowKey &&
+                this.Timestamp = game.Timestamp && this.ETag = game.ETag
+            | _ -> false
+
+        override this.GetHashCode() = 
+            [box this.Name; box this.Platform; box this.Developer
+             box this.HasMultiplayer; box this.PartitionKey; 
+             box this.RowKey; box this.Timestamp; box this.HasMultiplayer ] 
+                |> Seq.choose (fun o -> match o with | null -> None | o -> Some (o.GetHashCode()))
+                |> Seq.reduce (^^^)
 
 
     type DataQueryTests() = 
@@ -304,6 +330,31 @@ module DataQuery =
             valveGames |> Array.exists (fun (g, _) -> g.RowKey = "Portal-PC" ) |> should equal true
             valveGames |> Array.exists (fun (g, _) -> g.RowKey = "Portal 2-PC" ) |> should equal true
             valveGames |> Array.iter (fun (g, _) -> g.Timestamp |> should not' (equal (DateTimeOffset())))
+
+            valveGames |> verifyMetadata
+
+        [<Fact>]
+        let ``query with a table entity type that has an ignored property``() =
+            let valveGames = 
+                Query.all<GameTableEntityWithIgnoredProperty> 
+                |> Query.where <@ fun g s -> s.PartitionKey = "Valve" @> 
+                |> fromTable tableClient gameTableName
+                |> Seq.toArray
+            
+            valveGames |> verifyRecords [|
+                { Developer = "Valve"; Name = "Half-Life 2"; Platform = "PC"; HasMultiplayer = true }
+                { Developer = "Valve"; Name = "Portal"; Platform = "PC"; HasMultiplayer = false } 
+                { Developer = "Valve"; Name = "Portal 2"; Platform = "PC"; HasMultiplayer = false }
+            |]
+
+            valveGames |> Array.iter (fun (g, _) -> g.PartitionKey |> should equal "Valve")
+            valveGames |> Array.exists (fun (g, _) -> g.RowKey = "Half-Life 2-PC" ) |> should equal true
+            valveGames |> Array.exists (fun (g, _) -> g.RowKey = "Portal-PC" ) |> should equal true
+            valveGames |> Array.exists (fun (g, _) -> g.RowKey = "Portal 2-PC" ) |> should equal true
+            valveGames |> Array.iter (fun (g, _) -> g.Timestamp |> should not' (equal (DateTimeOffset())))
+
+            //Check that all HasMultiplayers are false as they should have not been populated as they are ignored
+            valveGames |> Array.iter (fun (g, _) -> g.HasMultiplayer |> should equal false)
 
             valveGames |> verifyMetadata
 

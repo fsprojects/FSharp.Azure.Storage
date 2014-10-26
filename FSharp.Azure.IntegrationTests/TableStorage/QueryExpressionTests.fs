@@ -15,6 +15,8 @@ module QueryExpression =
           Developer : string
           HasMultiplayer: bool option }
 
+    let gameTypePropertySet = ["Name"; "Platform"; "Developer"; "HasMultiplayer"] |> Set.ofList
+
     type Game = 
         { Name: string
           Platform: string
@@ -28,6 +30,7 @@ module QueryExpression =
             let query = Query.all<Game>
 
             query |> should equal (EntityQuery<Game>.get_Zero ())
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query with equals against value`` () = 
@@ -35,6 +38,7 @@ module QueryExpression =
 
             query.Filter |> should equal "Name eq 'Half-Life 2'"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query with not equals against value`` () = 
@@ -42,6 +46,7 @@ module QueryExpression =
 
             query.Filter |> should equal "Name ne 'Half-Life 2'"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query with greater than against value`` () = 
@@ -49,6 +54,7 @@ module QueryExpression =
 
             query.Filter |> should equal "Name gt 'Half-Life 2'"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query with greater than or equals against value`` () = 
@@ -56,6 +62,7 @@ module QueryExpression =
 
             query.Filter |> should equal "Name ge 'Half-Life 2'"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query with less than against value`` () = 
@@ -63,6 +70,7 @@ module QueryExpression =
 
             query.Filter |> should equal "Name lt 'Half-Life 2'"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query with less than or equals against value`` () = 
@@ -70,6 +78,7 @@ module QueryExpression =
 
             query.Filter |> should equal "Name le 'Half-Life 2'"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query with logical and operator`` () = 
@@ -77,6 +86,7 @@ module QueryExpression =
 
             query.Filter |> should equal "(Name eq 'Half-Life 2') and (Developer eq 'Valve')"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query with logical or operator`` () = 
@@ -84,6 +94,7 @@ module QueryExpression =
 
             query.Filter |> should equal "(Name eq 'Half-Life 2') or (Developer eq 'Valve')"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query with logical or and and operators uses correct operator precedence`` () = 
@@ -93,6 +104,7 @@ module QueryExpression =
 
             query.Filter |> should equal "(Name eq 'Half-Life 2') or ((Developer eq 'Crystal Dynamics') and (Name eq 'Tomb Raider'))"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query with logical or and and operators and parentheses`` () = 
@@ -102,6 +114,7 @@ module QueryExpression =
 
             query.Filter |> should equal "((Name eq 'Half-Life 2') or (Name eq 'Portal')) and (Developer eq 'Valve')"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query with comparison value coming from outside let binding`` () = 
@@ -110,6 +123,7 @@ module QueryExpression =
 
             query.Filter |> should equal "Name eq 'Half-Life 2'"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query with comparison value coming from outside object`` () = 
@@ -118,6 +132,7 @@ module QueryExpression =
 
             query.Filter |> should equal "Name eq 'Half-Life 2'"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query allows commutative comparison with equals`` () = 
@@ -125,6 +140,7 @@ module QueryExpression =
 
             query.Filter |> should equal "Name eq 'Halo'"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query allows commutative comparison with not equals`` () = 
@@ -132,6 +148,7 @@ module QueryExpression =
 
             query.Filter |> should equal "Name ne 'Halo'"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query allows commutative comparison with greater than`` () = 
@@ -139,6 +156,7 @@ module QueryExpression =
 
             query.Filter |> should equal "Name lt 'Halo'"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query allows commutative comparison with greater than or equals`` () = 
@@ -146,6 +164,7 @@ module QueryExpression =
 
             query.Filter |> should equal "Name le 'Halo'"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query allows commutative comparison with less than`` () = 
@@ -153,6 +172,7 @@ module QueryExpression =
 
             query.Filter |> should equal "Name gt 'Halo'"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query allows commutative comparison with less than or equals`` () = 
@@ -160,6 +180,7 @@ module QueryExpression =
 
             query.Filter |> should equal "Name ge 'Halo'"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query allows bool properties to be treated as comparison against true`` () = 
@@ -167,6 +188,7 @@ module QueryExpression =
 
             query.Filter |> should equal "HasMultiplayer eq true"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query allows notted bool properties to be treated as comparison against false`` () = 
@@ -174,6 +196,7 @@ module QueryExpression =
 
             query.Filter |> should equal "HasMultiplayer eq false"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query allows bool properties to be combined with other comparisons`` () = 
@@ -181,6 +204,7 @@ module QueryExpression =
 
             query.Filter |> should equal "(HasMultiplayer eq true) or (Developer eq 'Valve')"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query allows not to be used against property comparison`` () = 
@@ -188,6 +212,7 @@ module QueryExpression =
 
             query.Filter |> should equal "not (Developer eq 'Valve')"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query allows not to be used against boolean expressions`` () = 
@@ -195,6 +220,7 @@ module QueryExpression =
 
             query.Filter |> should equal "not ((Developer eq 'Valve') and (Name eq 'Portal'))"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query allows comparison against option types`` () =
@@ -204,6 +230,7 @@ module QueryExpression =
 
             query.Filter |> should equal "(Platform eq 'Valve') and (HasMultiplayer eq true)"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query does not allow comparison against option types with None`` () =
@@ -222,6 +249,7 @@ module QueryExpression =
 
             query.Filter |> should equal "(Name eq 'Halo 4') and (Developer eq '343 Studios')"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``partition key where query comparison`` () = 
@@ -229,6 +257,7 @@ module QueryExpression =
 
             query.Filter |> should equal "PartitionKey eq 'Valve'"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``row key where query comparison`` () = 
@@ -236,6 +265,7 @@ module QueryExpression =
 
             query.Filter |> should equal "RowKey ne 'PS4'"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``timestamp where query comparison`` () = 
@@ -244,6 +274,7 @@ module QueryExpression =
 
             query.Filter |> should equal "Timestamp gt datetime'2014-04-01T01:00:00.0000000Z'"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``where query allows system and entity properties to be all used together`` () = 
@@ -258,6 +289,7 @@ module QueryExpression =
 
             query.Filter |> should equal "((((Name ge 'Halo') and (Name lt 'I')) and (PartitionKey eq 'Bungie')) and (RowKey eq 'Xbox 360')) and (Timestamp lt datetime'2014-04-01T01:00:00.0000000Z')"
             query.TakeCount.IsNone |> should equal true
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``take sets take count on query`` () = 
@@ -266,6 +298,7 @@ module QueryExpression =
             query.Filter |> should equal ""
             query.TakeCount.IsSome |> should equal true
             query.TakeCount.Value |> should equal 10
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``multiple takes uses the smallest take count on query`` () = 
@@ -274,6 +307,7 @@ module QueryExpression =
             query.Filter |> should equal ""
             query.TakeCount.IsSome |> should equal true
             query.TakeCount.Value |> should equal 10
+            query.SelectColumns |> should equal gameTypePropertySet
 
         [<Fact>]
         let ``take combines with where query`` () = 
@@ -282,3 +316,19 @@ module QueryExpression =
             query.Filter |> should equal "PartitionKey eq 'Blizzard'"
             query.TakeCount.IsSome |> should equal true
             query.TakeCount.Value |> should equal 5
+            query.SelectColumns |> should equal gameTypePropertySet
+
+        [<Fact>]
+        let ``manual modification of query select columns is respected by subsequent query transformations`` () = 
+            let properties = [ "Name"; "Platform" ] |> Set.ofList
+            let query = 
+                Query.all<Game> 
+                |> (fun q -> { q with SelectColumns = properties })
+                |> Query.where <@ fun g s -> s.PartitionKey = "Blizzard" @> 
+                |> Query.take 5
+
+            query.Filter |> should equal "PartitionKey eq 'Blizzard'"
+            query.TakeCount.IsSome |> should equal true
+            query.TakeCount.Value |> should equal 5
+            query.SelectColumns |> should equal properties
+            
