@@ -75,10 +75,9 @@ module TableStorage =
                 { PartitionKey = tableEntity.PartitionKey; RowKey = tableEntity.RowKey }
             | _ -> buildIdentiferFromAttributesFunc())
                     
-        static let getIdentifier = ref (fun g -> defaultGetIdentifier.Value g)
+        static let mutable getIdentifier = fun g -> defaultGetIdentifier.Value g
 
-        static member GetIdentifier with get() = !(getIdentifier) and set fn = getIdentifier := fn
-
+        static member GetIdentifier with get() = getIdentifier and set fn = getIdentifier <- fn
 
     type private RecordTableEntityWrapper<'T>(record : 'T, identifier, etag) =
         static let recordFields = 
