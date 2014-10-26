@@ -21,7 +21,7 @@ module QueryExpression =
           Developer : string
           HasMultiplayer: bool }
 
-    type Tests() =
+    type QueryExpressionTests() =
         
         [<Fact>]
         let ``all returns empty query``() =

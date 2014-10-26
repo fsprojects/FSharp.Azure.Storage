@@ -52,7 +52,7 @@ module DataModification =
         member val Name : string = null with get,set
 
 
-    type Tests() = 
+    type DataModificationTests() = 
         static do EntityIdentiferReader.GetIdentifier <- getPureIdentifier
 
         let account = CloudStorageAccount.Parse "UseDevelopmentStorage=true;"

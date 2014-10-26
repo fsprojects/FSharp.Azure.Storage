@@ -67,7 +67,8 @@ module DataQuery =
                 |> Seq.reduce (^^^)
 
 
-    type Tests() = 
+
+    type DataQueryTests() = 
         let account = CloudStorageAccount.Parse "UseDevelopmentStorage=true;"
         let tableClient = account.CreateCloudTableClient()
         let gameTableName = "TestsGame"
