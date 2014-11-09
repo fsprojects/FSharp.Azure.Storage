@@ -11,7 +11,7 @@
     <iconUrl>http://bit.ly/fsharpazurelogo</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>A library that provides an idiomatic F# API for Microsoft Azure services.</description>
-    <releaseNotes>Release version. Support for option-typed record fields.</releaseNotes>
+    <releaseNotes>Optimises queries by only requesting table columns that are used by your record types.</releaseNotes>
     <copyright>Copyright 2014</copyright>
     <tags>fsharp f# microsoft azure table storage</tags>
   </metadata>

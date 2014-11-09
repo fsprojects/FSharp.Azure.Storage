@@ -8,9 +8,9 @@ open System.Runtime.CompilerServices
 [<assembly: AssemblyProduct("FSharp.Azure")>]
 [<assembly: AssemblyCopyright("Copyright © Daniel Chambers & Contributors 2014")>]
 
-[<assembly: AssemblyVersion("1.0.0.0")>]
-[<assembly: AssemblyFileVersion("1.0.0.0")>]
-[<assembly: AssemblyInformationalVersion("1.0.0")>]
+[<assembly: AssemblyVersion("1.0.1.0")>]
+[<assembly: AssemblyFileVersion("1.0.1.0")>]
+[<assembly: AssemblyInformationalVersion("1.0.1")>]
 
 [<assembly: InternalsVisibleTo("DigitallyCreated.FSharp.Azure.IntegrationTests")>]
 
