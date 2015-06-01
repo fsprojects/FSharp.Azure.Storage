@@ -94,3 +94,9 @@ Dependencies
 * F# 3.1 (VS2013)
 * WindowsAzure.Storage v3.1.0.1 - Azure SDK v2.3+ required if you want to use the Storage Emulator
 * FSharp.PowerPack v3.0.0
+
+## Maintainer(s)
+
+- [@daniel-chambers](https://github.com/daniel-chambers)
+
+The default maintainer account for projects under "fsprojects" is [@fsprojectsgit](https://github.com/fsprojectsgit) - F# Community Project Incubation Space (repo management)
