@@ -53,6 +53,8 @@ module TableStorage =
 
     let getOperationEntity (op : Operation<_>) = op.GetEntity()
 
+    let private isRecordType t = FSharpType.IsRecord (t, Reflection.BindingFlags.Public ||| Reflection.BindingFlags.NonPublic)
+
     [<AbstractClass; Sealed>]
     type EntityIdentiferReader<'T> private () =
         static let buildIdentiferFromAttributesFunc() =
@@ -82,11 +84,11 @@ module TableStorage =
 
     type private RecordTableEntityWrapper<'T>(record : 'T, identifier, etag) =
         static let recordFields = 
-            FSharpType.GetRecordFields typeof<'T>
+            FSharpType.GetRecordFields (typeof<'T>, true)
         static let recordReader = 
-            FSharpValue.PreComputeRecordReader typeof<'T>
+            FSharpValue.PreComputeRecordReader (typeof<'T>, true)
         static let recordWriter = 
-            FSharpValue.PreComputeRecordConstructor typeof<'T> >> (fun o -> o :?> 'T)
+            FSharpValue.PreComputeRecordConstructor (typeof<'T>, true) >> (fun o -> o :?> 'T)
 
         static member ResolveRecord (pk : string) (rk : string) (timestamp: DateTimeOffset) (properties : IDictionary<string, EntityProperty>) (etag : string) =
             let propValues = 
@@ -165,7 +167,7 @@ module TableStorage =
                 t.GetProperties()
                 |> Seq.choose getTableEntityProperty
                 |> Set.ofSeq
-            | t when FSharpType.IsRecord t -> 
+            | t when isRecordType t -> 
                 RecordTableEntityWrapper<'T>.RecordFields 
                 |> Seq.map (fun p -> p.Name) 
                 |> Set.ofSeq
@@ -175,13 +177,13 @@ module TableStorage =
         static member val Resolver = lazy (
             match typeof<'T> with
             | t when typeof<ITableEntity>.IsAssignableFrom t -> resolveTableEntity
-            | t when FSharpType.IsRecord t -> RecordTableEntityWrapper.ResolveRecord
+            | t when isRecordType t -> RecordTableEntityWrapper.ResolveRecord
             | t -> failwithf "Type %s must be either an ITableEntity or an F# record type" t.Name)
 
         static member val CreateTableOperation = lazy (
             match typeof<'T> with
                 | t when typeof<ITableEntity>.IsAssignableFrom t -> createTableOperationFromTableEntity
-                | t when FSharpType.IsRecord t -> createTableOperationFromRecord
+                | t when isRecordType t -> createTableOperationFromRecord
                 | _ -> failwithf "Type %s must be either an ITableEntity or an F# record type" typeof<'T>.Name)
 
     type EntityQuery<'T> = 
