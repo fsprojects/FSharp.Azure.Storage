@@ -9,6 +9,10 @@ open FsUnit.Xunit
 
 module DataQuery =
 
+    type internal InternalGame =
+        { [<RowKey>] Name: string
+          [<PartitionKey>] Developer: string }
+
     type GameWithOptions = 
         { Name: string
           Platform: string
@@ -400,6 +404,24 @@ module DataQuery =
             let retrievedGame = 
                 Query.all<GameWithOptions> 
                 |> Query.where <@ fun g s -> g.HasMultiplayer = Some false && g.Notes = game.Notes @>
+                |> fromGameTable
+                |> Seq.head 
+                |> fst
+
+            game = retrievedGame |> should equal true
+
+        [<Fact>]
+        let ``querying for a record type that is internal works``() = 
+            let game = 
+                { InternalGame.Name = "Transistor"
+                  Developer = "Supergiant Games" }
+
+            let result = game |> Insert |> inTable tableClient gameTableName
+            result.HttpStatusCode |> should equal 204
+
+            let retrievedGame = 
+                Query.all<InternalGame> 
+                |> Query.where <@ fun g s -> s.PartitionKey = game.Developer && s.RowKey = game.Name @>
                 |> fromGameTable
                 |> Seq.head 
                 |> fst

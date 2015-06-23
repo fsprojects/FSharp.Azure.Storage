@@ -51,6 +51,10 @@ module DataModification =
     type NonTableEntityClass() =
         member val Name : string = null with get,set
 
+    type internal InternalRecord =
+        { [<PartitionKey>] MuchInternal: string
+          [<RowKey>] VeryWow: string }
+
 
     type DataModificationTests() = 
         static do EntityIdentiferReader.GetIdentifier <- getPureIdentifier
@@ -501,5 +505,15 @@ module DataModification =
                   HasMultiplayer = None }
 
             let result = game |> Insert |> inGameTable
+
+            result.HttpStatusCode |> should equal 204
+
+        [<Fact>]
+        let ``inserting an internal record type works`` () =
+            let internalType = 
+                { MuchInternal = "SuchPrivates"
+                  VeryWow = "Amaze" }
+
+            let result = internalType |> Insert |> inGameTable
 
             result.HttpStatusCode |> should equal 204
