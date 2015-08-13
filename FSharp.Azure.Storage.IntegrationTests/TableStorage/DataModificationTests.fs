@@ -1,7 +1,7 @@
 ﻿namespace FSharp.Azure.Storage.IntegrationTests
 
 open System
-open FSharp.Azure.Storage.TableStorage
+open FSharp.Azure.Storage.Table
 open Microsoft.WindowsAzure.Storage
 open Microsoft.WindowsAzure.Storage.Table
 open Xunit

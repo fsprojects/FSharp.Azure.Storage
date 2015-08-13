@@ -2,7 +2,7 @@
 
 open System;
 
-module TableStorage =
+module Table =
 
     open System.Collections.Generic
     open System.Linq
