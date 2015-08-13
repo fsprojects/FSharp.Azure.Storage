@@ -11,8 +11,10 @@
     <iconUrl>https://raw.githubusercontent.com/fsprojects/FSharp.Azure.Storage/master/media/Logo.128.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>A library that provides an idiomatic F# API for Microsoft Azure services.</description>
-    <releaseNotes>- Renamed project from FSharp.Azure to FSharp.Azure.Storage.
-- Namespaces and assemblies have been changed from DigitallyCreated.FSharp.Azure to FSharp.Azure.Storage</releaseNotes>
+    <releaseNotes>Breaking changes since FSharp.Azure 1.0.x:
+- Renamed project from FSharp.Azure to FSharp.Azure.Storage.
+- Namespaces and assemblies have been changed from DigitallyCreated.FSharp.Azure to FSharp.Azure.Storage
+- TableStorage module has been renamed to Table</releaseNotes>
     <copyright>Copyright 2015</copyright>
     <tags>fsharp f# microsoft azure table storage</tags>
   </metadata>
