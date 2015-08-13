@@ -1,4 +1,4 @@
-﻿namespace DigitallyCreated.FSharp.Azure
+﻿namespace DigitallyCreated.FSharp.Azure.Storage
 
 open System;
 

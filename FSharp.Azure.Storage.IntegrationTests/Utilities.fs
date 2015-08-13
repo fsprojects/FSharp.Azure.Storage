@@ -1,8 +1,8 @@
-﻿namespace DigitallyCreated.FSharp.Azure.IntegrationTests
+﻿namespace DigitallyCreated.FSharp.Azure.Storage.IntegrationTests
 
 module Async =
-    open DigitallyCreated.FSharp.Azure
-    open DigitallyCreated.FSharp.Azure.Utilities
+    open DigitallyCreated.FSharp.Azure.Storage
+    open DigitallyCreated.FSharp.Azure.Storage.Utilities
 
     let Sequential computations =
         let rec innerSequential results computations =

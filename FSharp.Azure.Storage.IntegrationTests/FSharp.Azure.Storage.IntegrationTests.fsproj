@@ -7,11 +7,11 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>327b3691-1385-4daa-a3b4-278b97717f16</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>DigitallyCreated.FSharp.Azure.IntegrationTests</RootNamespace>
-    <AssemblyName>DigitallyCreated.FSharp.Azure.IntegrationTests</AssemblyName>
+    <RootNamespace>DigitallyCreated.FSharp.Azure.Storage.IntegrationTests</RootNamespace>
+    <AssemblyName>DigitallyCreated.FSharp.Azure.Storage.IntegrationTests</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <TargetFSharpCoreVersion>4.3.1.0</TargetFSharpCoreVersion>
-    <Name>DigitallyCreated.FSharp.Azure.IntegrationTests</Name>
+    <Name>DigitallyCreated.FSharp.Azure.Storage.IntegrationTests</Name>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
   </PropertyGroup>
@@ -23,7 +23,7 @@
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Debug\DigitallyCreated.FSharp.Azure.IntegrationTests.XML</DocumentationFile>
+    <DocumentationFile>bin\Debug\DigitallyCreated.FSharp.Azure.Storage.IntegrationTests.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -32,7 +32,7 @@
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Release\DigitallyCreated.FSharp.Azure.IntegrationTests.XML</DocumentationFile>
+    <DocumentationFile>bin\Release\DigitallyCreated.FSharp.Azure.Storage.IntegrationTests.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="FsUnit.CustomMatchers">
@@ -104,8 +104,8 @@
     <None Include="app.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\FSharp.Azure\FSharp.Azure.fsproj">
-      <Name>DigitallyCreated.FSharp.Azure</Name>
+    <ProjectReference Include="..\FSharp.Azure.Storage\FSharp.Azure.Storage.fsproj">
+      <Name>DigitallyCreated.FSharp.Azure.Storage</Name>
       <Project>{8602c079-a1cf-445b-92c8-bfeb74d7186a}</Project>
       <Private>True</Private>
     </ProjectReference>

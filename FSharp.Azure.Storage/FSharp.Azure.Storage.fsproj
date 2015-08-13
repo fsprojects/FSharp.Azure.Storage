@@ -7,11 +7,11 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>8602c079-a1cf-445b-92c8-bfeb74d7186a</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>DigitallyCreated.FSharp.Azure</RootNamespace>
-    <AssemblyName>DigitallyCreated.FSharp.Azure</AssemblyName>
+    <RootNamespace>DigitallyCreated.FSharp.Azure.Storage</RootNamespace>
+    <AssemblyName>DigitallyCreated.FSharp.Azure.Storage</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <TargetFSharpCoreVersion>4.3.1.0</TargetFSharpCoreVersion>
-    <Name>DigitallyCreated.FSharp.Azure</Name>
+    <Name>DigitallyCreated.FSharp.Azure.Storage</Name>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
   </PropertyGroup>
@@ -23,7 +23,7 @@
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Debug\DigitallyCreated.FSharp.Azure.XML</DocumentationFile>
+    <DocumentationFile>bin\Debug\DigitallyCreated.FSharp.Azure.Storage.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -32,7 +32,7 @@
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Release\DigitallyCreated.FSharp.Azure.XML</DocumentationFile>
+    <DocumentationFile>bin\Release\DigitallyCreated.FSharp.Azure.Storage.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="FSharp.PowerPack">
@@ -89,7 +89,7 @@
     <None Include="packages.config" />
     <None Include="app.config" />
     <Compile Include="AssemblyInfo.fs" />
-    <None Include="FSharp.Azure.nuspec" />
+    <None Include="FSharp.Azure.Storage.nuspec" />
   </ItemGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>

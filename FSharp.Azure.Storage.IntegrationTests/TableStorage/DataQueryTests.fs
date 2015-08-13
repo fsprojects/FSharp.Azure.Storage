@@ -1,7 +1,7 @@
-﻿namespace DigitallyCreated.FSharp.Azure.IntegrationTests
+﻿namespace DigitallyCreated.FSharp.Azure.Storage.IntegrationTests
 
 open System
-open DigitallyCreated.FSharp.Azure.TableStorage
+open DigitallyCreated.FSharp.Azure.Storage.TableStorage
 open Microsoft.WindowsAzure.Storage
 open Microsoft.WindowsAzure.Storage.Table
 open Xunit
