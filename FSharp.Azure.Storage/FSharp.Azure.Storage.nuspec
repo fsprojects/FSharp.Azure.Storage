@@ -1,19 +1,18 @@
 ﻿<?xml version="1.0"?>
 <package>
   <metadata>
-    <id>FSharp.Azure</id>
+    <id>FSharp.Azure.Storage</id>
     <version>$version$</version>
-    <title>FSharp.Azure (deprecated)</title>
+    <title>FSharp.Azure.Storage</title>
     <authors>Daniel Chambers &amp; Contributors</authors>
     <owners>Daniel Chambers &amp; Contributors</owners>
     <projectUrl>https://github.com/fsprojects/FSharp.Azure.Storage</projectUrl>
-    <licenseUrl>https://github.com/fsprojects/FSharp.Azure.Storage/blob/v1.0.3/LICENCE.txt</licenseUrl>
-    <iconUrl>https://raw.githubusercontent.com/fsprojects/FSharp.Azure.Storage/v1.0.3/media/Logo.128.png</iconUrl>
+    <licenseUrl>https://github.com/fsprojects/FSharp.Azure.Storage/blob/master/LICENCE.txt</licenseUrl>
+    <iconUrl>https://raw.githubusercontent.com/fsprojects/FSharp.Azure.Storage/master/media/Logo.128.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>DEPRECATED: Please use FSharp.Azure.Storage instead. 
-
-A library that provides an idiomatic F# API for Microsoft Azure services.</description>
-    <releaseNotes>Package deprecation message. No functional changes from previous version.</releaseNotes>
+    <description>A library that provides an idiomatic F# API for Microsoft Azure services.</description>
+    <releaseNotes>- Renamed project from FSharp.Azure to FSharp.Azure.Storage.
+- Namespaces and assemblies have been changed from DigitallyCreated.FSharp.Azure to FSharp.Azure.Storage</releaseNotes>
     <copyright>Copyright 2015</copyright>
     <tags>fsharp f# microsoft azure table storage</tags>
   </metadata>
