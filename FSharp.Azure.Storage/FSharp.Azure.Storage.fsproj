@@ -5,13 +5,13 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>327b3691-1385-4daa-a3b4-278b97717f16</ProjectGuid>
+    <ProjectGuid>8602c079-a1cf-445b-92c8-bfeb74d7186a</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>DigitallyCreated.FSharp.Azure.IntegrationTests</RootNamespace>
-    <AssemblyName>DigitallyCreated.FSharp.Azure.IntegrationTests</AssemblyName>
+    <RootNamespace>DigitallyCreated.FSharp.Azure.Storage</RootNamespace>
+    <AssemblyName>FSharp.Azure.Storage</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <TargetFSharpCoreVersion>4.3.1.0</TargetFSharpCoreVersion>
-    <Name>DigitallyCreated.FSharp.Azure.IntegrationTests</Name>
+    <Name>DigitallyCreated.FSharp.Azure.Storage</Name>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
   </PropertyGroup>
@@ -23,7 +23,7 @@
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Debug\DigitallyCreated.FSharp.Azure.IntegrationTests.XML</DocumentationFile>
+    <DocumentationFile>bin\Debug\FSharp.Azure.Storage.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -32,15 +32,15 @@
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Release\DigitallyCreated.FSharp.Azure.IntegrationTests.XML</DocumentationFile>
+    <DocumentationFile>bin\Release\FSharp.Azure.Storage.xml</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="FsUnit.CustomMatchers">
-      <HintPath>..\packages\FsUnit.xUnit.1.2.2.1\Lib\net40\FsUnit.CustomMatchers.dll</HintPath>
+    <Reference Include="FSharp.PowerPack">
+      <HintPath>..\packages\FSPowerPack.Core.Community.3.0.0.0\Lib\Net40\FSharp.PowerPack.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="FsUnit.Xunit">
-      <HintPath>..\packages\FsUnit.xUnit.1.2.2.1\Lib\net40\FsUnit.Xunit.dll</HintPath>
+    <Reference Include="FSharp.PowerPack.Linq">
+      <HintPath>..\packages\FSPowerPack.Linq.Community.3.0.0.0\Lib\Net40\FSharp.PowerPack.Linq.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="Microsoft.Data.Edm">
@@ -71,10 +71,6 @@
       <HintPath>..\packages\Newtonsoft.Json.6.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="NHamcrest">
-      <HintPath>..\packages\FsUnit.xUnit.1.2.2.1\Lib\net40\NHamcrest.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
@@ -86,29 +82,14 @@
     </Reference>
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
-    <Reference Include="xunit">
-      <HintPath>..\packages\xunit.1.9.2\lib\net20\xunit.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="xunit.extensions">
-      <HintPath>..\packages\xunit.extensions.1.9.2\lib\net20\xunit.extensions.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Utilities.fs" />
-    <Compile Include="TableStorage\DataModificationTests.fs" />
-    <Compile Include="TableStorage\QueryExpressionTests.fs" />
-    <Compile Include="TableStorage\DataQueryTests.fs" />
+    <Compile Include="Table.fs" />
     <None Include="packages.config" />
     <None Include="app.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\FSharp.Azure\FSharp.Azure.fsproj">
-      <Name>DigitallyCreated.FSharp.Azure</Name>
-      <Project>{8602c079-a1cf-445b-92c8-bfeb74d7186a}</Project>
-      <Private>True</Private>
-    </ProjectReference>
+    <Compile Include="AssemblyInfo.fs" />
+    <None Include="FSharp.Azure.Storage.nuspec" />
   </ItemGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>

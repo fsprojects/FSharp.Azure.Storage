@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
 VisualStudioVersion = 12.0.30110.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Azure", "FSharp.Azure\FSharp.Azure.fsproj", "{8602C079-A1CF-445B-92C8-BFEB74D7186A}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Azure.Storage", "FSharp.Azure.Storage\FSharp.Azure.Storage.fsproj", "{8602C079-A1CF-445B-92C8-BFEB74D7186A}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Azure.IntegrationTests", "FSharp.Azure.IntegrationTests\FSharp.Azure.IntegrationTests.fsproj", "{327B3691-1385-4DAA-A3B4-278B97717F16}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Azure.Storage.IntegrationTests", "FSharp.Azure.Storage.IntegrationTests\FSharp.Azure.Storage.IntegrationTests.fsproj", "{327B3691-1385-4DAA-A3B4-278B97717F16}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{E6BF3000-8079-43CF-A824-434D5C31A4FE}"
 	ProjectSection(SolutionItems) = preProject

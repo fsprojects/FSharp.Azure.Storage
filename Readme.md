@@ -1,7 +1,7 @@
-FSharp.Azure
-============
+FSharp.Azure.Storage
+====================
 
-FSharp.Azure is a wrapper over the standard Microsoft [WindowsAzure.Storage][1]
+FSharp.Azure.Storage is a wrapper over the standard Microsoft [WindowsAzure.Storage][1]
 library that allows you to write idiomatic F# when talking to Azure.
 
 The standard storage API is fine when you're writing C#, however when you're
@@ -12,7 +12,7 @@ async support and generally write in a functional style.
 
 NuGet
 -----
-`Install-Package FSharp.Azure`
+`Install-Package FSharp.Azure.Storage`
 
 A Quick Taster
 --------------
@@ -20,7 +20,7 @@ A Quick Taster
 Imagine we had a record type that we wanted to save into table storage:
 
 ```f#
-open DigitallyCreated.FSharp.Azure.TableStorage
+open FSharp.Azure.Storage.Table
 
 type Game = 
     { [<PartitionKey>] Developer: string
@@ -86,7 +86,7 @@ let multiplayerValveGames =
 ### Further Information
 For further documentation and examples, please visit the [wiki][2].
 
-[2]: https://github.com/daniel-chambers/FSharp.Azure/wiki
+[2]: https://github.com/fsprojects/FSharp.Azure.Storage/wiki
 
 
 Dependencies
