@@ -3,15 +3,17 @@
   <metadata>
     <id>FSharp.Azure</id>
     <version>$version$</version>
-    <title>FSharp.Azure</title>
+    <title>FSharp.Azure (deprecated)</title>
     <authors>Daniel Chambers &amp; Contributors</authors>
     <owners>Daniel Chambers &amp; Contributors</owners>
-    <projectUrl>https://github.com/daniel-chambers/fsharp.azure</projectUrl>
-    <licenseUrl>https://github.com/daniel-chambers/FSharp.Azure/blob/master/LICENCE.txt</licenseUrl>
-    <iconUrl>http://bit.ly/fsharpazurelogo</iconUrl>
+    <projectUrl>https://github.com/fsprojects/FSharp.Azure.Storage</projectUrl>
+    <licenseUrl>https://github.com/fsprojects/FSharp.Azure.Storage/blob/v1.0.3/LICENCE.txt</licenseUrl>
+    <iconUrl>https://raw.githubusercontent.com/fsprojects/FSharp.Azure.Storage/v1.0.3/media/Logo.128.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>A library that provides an idiomatic F# API for Microsoft Azure services.</description>
-    <releaseNotes>Fixed issue where internal record types caused crashes.</releaseNotes>
+    <description>DEPRECATED: Please use FSharp.Azure.Storage instead. 
+
+A library that provides an idiomatic F# API for Microsoft Azure services.</description>
+    <releaseNotes>Package deprecation message. No functional changes from previous version.</releaseNotes>
     <copyright>Copyright 2015</copyright>
     <tags>fsharp f# microsoft azure table storage</tags>
   </metadata>
