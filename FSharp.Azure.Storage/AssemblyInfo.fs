@@ -8,9 +8,9 @@ open System.Runtime.CompilerServices
 [<assembly: AssemblyProduct("FSharp.Azure.Storage")>]
 [<assembly: AssemblyCopyright("Copyright © Daniel Chambers & Contributors 2015")>]
 
-[<assembly: AssemblyVersion("2.0.0.0")>]
-[<assembly: AssemblyFileVersion("2.0.0.0")>]
-[<assembly: AssemblyInformationalVersion("2.0.0")>]
+[<assembly: AssemblyVersion("2.1.0.0")>]
+[<assembly: AssemblyFileVersion("2.1.0.0")>]
+[<assembly: AssemblyInformationalVersion("2.1.0")>]
 
 [<assembly: InternalsVisibleTo("FSharp.Azure.Storage.IntegrationTests")>]
 
