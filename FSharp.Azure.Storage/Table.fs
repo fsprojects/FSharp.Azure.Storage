@@ -96,9 +96,12 @@ module Table =
                 |> Seq.map (fun f -> 
                     match properties |> tryGet f.Name with
                     | Some prop -> 
+                        let underlyingPropertyType = getUnderlyingTypeIfOption f.PropertyType
                         match prop.PropertyAsObject with
                         | null -> runtimeGetUncheckedDefault f.PropertyType
-                        | value when value.GetType() <> (getUnderlyingTypeIfOption f.PropertyType) -> 
+                        | value when value.GetType() = typeof<DateTime> && underlyingPropertyType = typeof<DateTimeOffset> ->
+                            DateTimeOffset(value :?> DateTime) |> wrapIfOption f.PropertyType
+                        | value when value.GetType() <> underlyingPropertyType -> 
                             failwithf "The property %s on type %s of type %s has deserialized as the incorrect type %s" f.Name typeof<'T>.Name f.PropertyType.Name (value.GetType().Name)
                         | value -> value |> wrapIfOption f.PropertyType
                     | None -> 
@@ -293,6 +296,8 @@ module Table =
             | :? (bool option) as v -> TableQuery.GenerateFilterConditionForBool (propertyName, op |> toOperator, v.Value)
             | :? DateTimeOffset as v -> TableQuery.GenerateFilterConditionForDate (propertyName, op |> toOperator, v)
             | :? (DateTimeOffset option) as v -> TableQuery.GenerateFilterConditionForDate (propertyName, op |> toOperator, v.Value)
+            | :? DateTime as v -> TableQuery.GenerateFilterConditionForDate (propertyName, op |> toOperator, new DateTimeOffset(v))
+            | :? (DateTime option) as v -> TableQuery.GenerateFilterConditionForDate (propertyName, op |> toOperator, new DateTimeOffset(v.Value))
             | :? double as v -> TableQuery.GenerateFilterConditionForDouble (propertyName, op |> toOperator, v)
             | :? (double option) as v -> TableQuery.GenerateFilterConditionForDouble (propertyName, op |> toOperator, v.Value)
             | :? Guid as v -> TableQuery.GenerateFilterConditionForGuid (propertyName, op |> toOperator, v)
