@@ -69,6 +69,7 @@ module internal Utilities =
         | :? (byte[] option) as opt -> opt.Value :> obj
         | :? (bool option) as opt -> opt.Value :> obj
         | :? (DateTimeOffset option) as opt -> opt.Value :> obj
+        | :? (DateTime option) as opt -> opt.Value :> obj
         | :? (double option) as opt -> opt.Value :> obj
         | :? (Guid option) as opt -> opt.Value :> obj
         | :? (int option) as opt -> opt.Value :> obj
@@ -82,6 +83,7 @@ module internal Utilities =
             | :? (byte[]) as v -> Some v :> obj
             | :? bool as v -> Some v :> obj
             | :? DateTimeOffset as v -> Some v :> obj
+            | :? DateTime as v -> Some v :> obj
             | :? double as v -> Some v :> obj
             | :? Guid as v -> Some v :> obj
             | :? int as v -> Some v :> obj

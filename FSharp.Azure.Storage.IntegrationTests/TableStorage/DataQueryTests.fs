@@ -9,6 +9,12 @@ open FsUnit.Xunit
 
 module DataQuery =
 
+    type GameWithDateTime = 
+        { [<RowKey>] Name: string
+          DevelopmentDate: DateTime
+          DevelopmentDateAsOffset: DateTimeOffset
+          [<PartitionKey>] Developer : string }
+
     type internal InternalGame =
         { [<RowKey>] Name: string
           [<PartitionKey>] Developer: string }
@@ -422,6 +428,26 @@ module DataQuery =
             let retrievedGame = 
                 Query.all<InternalGame> 
                 |> Query.where <@ fun g s -> s.PartitionKey = game.Developer && s.RowKey = game.Name @>
+                |> fromGameTable
+                |> Seq.head 
+                |> fst
+
+            game = retrievedGame |> should equal true
+
+        [<Fact>]
+        let ``querying for a record type that uses a DateTime and DateTimeOffset property works``() = 
+            let game = 
+                { Name = "Transistor"
+                  Developer = "Supergiant Games"
+                  DevelopmentDate = DateTime(2014, 5, 20, 0, 0, 0, DateTimeKind.Utc)
+                  DevelopmentDateAsOffset = DateTimeOffset(2014, 5, 20, 0, 0, 0, TimeSpan.Zero) }
+
+            let result = game |> Insert |> inTable tableClient gameTableName
+            result.HttpStatusCode |> should equal 204
+
+            let retrievedGame = 
+                Query.all<GameWithDateTime> 
+                |> Query.where <@ fun g s -> g.DevelopmentDate = game.DevelopmentDate && g.DevelopmentDateAsOffset = game.DevelopmentDateAsOffset @>
                 |> fromGameTable
                 |> Seq.head 
                 |> fst
