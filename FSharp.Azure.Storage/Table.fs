@@ -7,10 +7,10 @@ module Table =
     open System.Collections.Generic
     open System.Linq
     open System.Reflection
-    open Microsoft.FSharp.Linq.QuotationEvaluation
     open Microsoft.FSharp.Quotations
     open Microsoft.FSharp.Quotations.Patterns
     open Microsoft.FSharp.Reflection
+    open FSharp.Quotations.Evaluator
     open Microsoft.WindowsAzure.Storage.Table
     open Utilities
 
@@ -68,7 +68,7 @@ module Table =
             let recordInitializer = <@ { PartitionKey = %%pk; RowKey = %%rk } @>
 
             let quotation = Expr.Cast<'T -> EntityIdentifier>(Expr.Lambda(var, recordInitializer))
-            quotation.Compile()()
+            QuotationEvaluator.Evaluate quotation
 
         static let defaultGetIdentifier = lazy(
             match typeof<'T> with
@@ -138,7 +138,7 @@ module Table =
             let ctor = typeof<'T>.GetConstructor([||])
             if ctor = null then failwithf "Type %s does not have a parameterless constructor" typeof<'T>.Name
             let lambda = Expr.Lambda(Var("unit", typeof<unit>), Expr.NewObject(ctor, []))
-            Expr.Cast<unit -> 'T>(lambda).Compile()())
+            Expr.Cast<unit -> 'T>(lambda) |> QuotationEvaluator.Evaluate)
 
         static let resolveTableEntity (pk : string) (rk : string) (timestamp: DateTimeOffset) (properties : IDictionary<string, EntityProperty>) (etag : string) =
             let entity = tableEntityTypeConstructor.Value()
@@ -283,7 +283,7 @@ module Table =
             match expr with
             | Value (o, _) -> Some(ComparisonValue (o))
             | expr when expr.GetFreeVars().Any() -> failwithf "Cannot evaluate %A to a comparison value as it contains free variables" expr
-            | expr -> Some(ComparisonValue (expr.EvalUntyped()))
+            | expr -> Some(ComparisonValue (QuotationEvaluator.EvaluateUntyped expr))
 
         let private generateFilterCondition (type' : Type) propertyName op (value : obj) = 
             match value with
