@@ -35,10 +35,7 @@ Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 let release = parseReleaseNotes (IO.File.ReadAllLines "RELEASE_NOTES.md")
 let nugetVersion = release.NugetVersion
 
-let testAssemblies = 
-    [ 
-        yield! !! "**/bin/Release/FSharp.Azure.Storage.IntegrationTests.dll" 
-    ]
+let testAssemblies = [ "**/bin/Release/FSharp.Azure.Storage.IntegrationTests.dll" ]
 
 Target "BuildVersion" (fun _ ->
     Shell.Exec("appveyor", sprintf "UpdateBuild -Version \"%s\"" nugetVersion) |> ignore
@@ -89,6 +86,7 @@ Target "Build" (fun () ->
 
 Target "RunTests" (fun _ ->
     testAssemblies
+    |> Seq.collect (!!)
     |> xUnit2 (fun (p : XUnit2Params) -> 
         { p with
             TimeOut = TimeSpan.FromMinutes 20.
