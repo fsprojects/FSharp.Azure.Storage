@@ -17,3 +17,5 @@ projecturl https://github.com/fsprojects/FSharp.Azure.Storage
 iconurl https://raw.githubusercontent.com/fsprojects/FSharp.Azure.Storage/master/media/Logo.128.png
 tags
     fsharp, f#, microsoft, azure, table, storage
+dependencies
+    WindowsAzure.Storage >= LOCKEDVERSION

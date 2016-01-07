@@ -7,20 +7,20 @@ NUGET
     FsUnit.xUnit (1.4.1)
       FSharp.Core (>= 3.1.2.5)
       xunit (2.1.0)
-    Microsoft.Azure.KeyVault.Core (1.0.0) - framework: >= net40, wpv8.0
     Microsoft.Bcl (1.1.10)
       Microsoft.Bcl.Build (>= 1.0.14)
     Microsoft.Bcl.Build (1.0.21) - import_targets: false
-    Microsoft.Data.Edm (5.6.4) - framework: >= net40, winv4.5, wpv8.1, wpv8.0
-    Microsoft.Data.OData (5.6.4) - framework: >= net40, winv4.5, wpv8.1, wpv8.0
-      Microsoft.Data.Edm (5.6.4)
-      System.Spatial (5.6.4)
-    Microsoft.Data.Services.Client (5.6.4) - framework: >= net40
-      Microsoft.Data.OData (5.6.4)
+    Microsoft.Data.Edm (5.7.0)
+    Microsoft.Data.OData (5.7.0)
+      Microsoft.Data.Edm (5.7.0)
+      System.Spatial (5.7.0)
+    Microsoft.Data.Services.Client (5.7.0)
+      Microsoft.Data.OData (5.7.0)
     Microsoft.Net.Http (2.2.29)
       Microsoft.Bcl (>= 1.1.10)
       Microsoft.Bcl.Build (>= 1.0.14)
-    Newtonsoft.Json (6.0.8) - framework: >= net40, winv4.5, wpv8.1, wpv8.0
+    Microsoft.WindowsAzure.ConfigurationManager (3.1.0)
+    Newtonsoft.Json (8.0.1)
     NuGet.CommandLine (3.3.0)
     Octokit (0.17.0)
       Microsoft.Net.Http
@@ -123,7 +123,7 @@ NUGET
       System.Private.Uri (>= 4.0.0) - framework: dnxcore50
     System.Runtime.Extensions (4.0.10) - framework: dnxcore50
       System.Runtime (>= 4.0.20) - framework: dnxcore50
-    System.Spatial (5.6.4) - framework: >= net40, winv4.5, wpv8.1, wpv8.0
+    System.Spatial (5.7.0)
     System.Text.Encoding (4.0.10) - framework: dnxcore50
       System.Runtime (>= 4.0.0) - framework: dnxcore50
     System.Text.Encoding.Extensions (4.0.10) - framework: dnxcore50
@@ -141,11 +141,11 @@ NUGET
       System.Threading.Tasks (>= 4.0.0) - framework: dnxcore50
     System.Threading.Tasks (4.0.10) - framework: dnxcore50
       System.Runtime (>= 4.0.0) - framework: dnxcore50
-    WindowsAzure.Storage (6.2.0)
-      Microsoft.Azure.KeyVault.Core (>= 1.0.0) - framework: >= net40, wpv8.0
-      Microsoft.Data.OData (>= 5.6.4) - framework: >= net40, winv4.5, wpv8.1, wpv8.0
-      Microsoft.Data.Services.Client (>= 5.6.4) - framework: >= net40
-      Newtonsoft.Json (>= 6.0.8) - framework: >= net40, winv4.5, wpv8.1, wpv8.0
+    WindowsAzure.Storage (3.2.1)
+      Microsoft.Data.OData (>= 5.6.0)
+      Microsoft.Data.Services.Client (>= 5.6.0)
+      Microsoft.WindowsAzure.ConfigurationManager (>= 1.8.0.0)
+      Newtonsoft.Json (>= 5.0.6)
     xunit (2.1.0)
       xunit.assert (2.1.0)
       xunit.core (2.1.0)
