@@ -1,0 +1,21 @@
+﻿type project
+id FSharp.Azure.Storage
+description
+    A library that provides an idiomatic F# API for Microsoft Azure services.
+version
+    2.1.0
+authors
+    Daniel Chambers
+copyright
+    Copyright 2015
+releasenotes
+    RELEASE NOTES
+summary
+    A library that provides an idiomatic F# API for Microsoft Azure services.
+licenseurl https://github.com/fsprojects/FSharp.Azure.Storage/blob/master/LICENCE.txt
+projecturl https://github.com/fsprojects/FSharp.Azure.Storage
+iconurl https://raw.githubusercontent.com/fsprojects/FSharp.Azure.Storage/master/media/Logo.128.png
+tags
+    fsharp, f#, microsoft, azure, table, storage
+dependencies
+    WindowsAzure.Storage >= LOCKEDVERSION

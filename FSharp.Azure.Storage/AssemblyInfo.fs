@@ -1,17 +1,15 @@
-﻿namespace FSharp.Azure.Storage
-
+﻿namespace System
 open System.Reflection
 open System.Runtime.CompilerServices
 
-[<assembly: AssemblyTitle("FSharp.Azure.Storage")>]
-[<assembly: AssemblyCompany("Daniel Chambers & Contributors")>]
-[<assembly: AssemblyProduct("FSharp.Azure.Storage")>]
-[<assembly: AssemblyCopyright("Copyright © Daniel Chambers & Contributors 2015")>]
+[<assembly: AssemblyTitleAttribute("FSharp.Azure.Storage")>]
+[<assembly: AssemblyProductAttribute("FSharp.Azure.Storage")>]
+[<assembly: AssemblyCompanyAttribute("Daniel Chambers & Contributors")>]
+[<assembly: AssemblyCopyrightAttribute("Copyright © Daniel Chambers & Contributors 2015")>]
+[<assembly: AssemblyVersionAttribute("2.1.0")>]
+[<assembly: AssemblyFileVersionAttribute("2.1.0")>]
+[<assembly: InternalsVisibleToAttribute("FSharp.Azure.Storage.IntegrationTests")>]
+do ()
 
-[<assembly: AssemblyVersion("2.1.0.0")>]
-[<assembly: AssemblyFileVersion("2.1.0.0")>]
-[<assembly: AssemblyInformationalVersion("2.1.0")>]
-
-[<assembly: InternalsVisibleTo("FSharp.Azure.Storage.IntegrationTests")>]
-
-do()
+module internal AssemblyVersionInformation =
+    let [<Literal>] Version = "2.1.0"

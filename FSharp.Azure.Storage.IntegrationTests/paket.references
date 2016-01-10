@@ -1,0 +1,5 @@
+WindowsAzure.Storage
+xunit
+xunit.extensions
+FsUnit.xUnit
+FSharp.Core

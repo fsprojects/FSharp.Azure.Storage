@@ -1,0 +1,13 @@
+redirects: on
+source https://www.nuget.org/api/v2/
+
+nuget FSharp.Core ~> 3.1 redirects:force
+nuget FSharp.Quotations.Evaluator ~> 1.0
+nuget WindowsAzure.Storage ~> 3.1
+nuget xunit ~> 2.0
+nuget xunit.extensions
+nuget xunit.runner.console
+nuget FsUnit.xUnit
+nuget Nuget.CommandLine
+nuget FAKE
+github fsharp/FAKE modules/Octokit/Octokit.fsx

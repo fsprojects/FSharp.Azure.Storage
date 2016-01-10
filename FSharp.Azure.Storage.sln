@@ -1,17 +1,27 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.30110.0
+# Visual Studio 14
+VisualStudioVersion = 14.0.24720.0
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".paket", ".paket", "{E5F9EF4A-8E9D-474E-8430-7105553DC28B}"
+	ProjectSection(SolutionItems) = preProject
+		paket.dependencies = paket.dependencies
+		paket.lock = paket.lock
+		.paket\paket.targets = .paket\paket.targets
+	EndProjectSection
+EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Azure.Storage", "FSharp.Azure.Storage\FSharp.Azure.Storage.fsproj", "{8602C079-A1CF-445B-92C8-BFEB74D7186A}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Azure.Storage.IntegrationTests", "FSharp.Azure.Storage.IntegrationTests\FSharp.Azure.Storage.IntegrationTests.fsproj", "{327B3691-1385-4DAA-A3B4-278B97717F16}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{E6BF3000-8079-43CF-A824-434D5C31A4FE}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "project", "project", "{96357C73-EBCB-425F-A39A-D511E8BDBCEA}"
 	ProjectSection(SolutionItems) = preProject
-		.nuget\NuGet.Config = .nuget\NuGet.Config
-		.nuget\NuGet.exe = .nuget\NuGet.exe
-		.nuget\NuGet.targets = .nuget\NuGet.targets
+		build.cmd = build.cmd
+		build.fsx = build.fsx
+		build.sh = build.sh
+		LICENCE.txt = LICENCE.txt
+		Readme.md = Readme.md
+		RELEASE_NOTES.md = RELEASE_NOTES.md
 	EndProjectSection
 EndProject
 Global
