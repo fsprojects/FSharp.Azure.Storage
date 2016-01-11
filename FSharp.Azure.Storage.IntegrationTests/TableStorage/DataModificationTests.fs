@@ -55,13 +55,13 @@ module DataModification =
         { [<PartitionKey>] MuchInternal: string
           [<RowKey>] VeryWow: string }
 
-
-    type DataModificationTests() = 
+    [<AbstractClass>]
+    type DataModificationTests(connectionString : string) = 
         static do EntityIdentiferReader.GetIdentifier <- getPureIdentifier
 
-        let account = CloudStorageAccount.Parse "UseDevelopmentStorage=true;"
+        let account = CloudStorageAccount.Parse connectionString
         let tableClient = account.CreateCloudTableClient()
-        let gameTableName = "TestsGame"
+        let gameTableName = Storage.getTableName()
         let gameTable = tableClient.GetTableReference gameTableName
 
         let inGameTable e = inTable tableClient gameTableName e
@@ -69,8 +69,7 @@ module DataModification =
         let inGameTableAsBatch e = inTableAsBatch tableClient gameTableName e
         let inGameTableAsBatchAsync e = inTableAsBatchAsync tableClient gameTableName e
 
-        do gameTable.DeleteIfExists() |> ignore
-        do gameTable.Create() |> ignore
+        do Storage.clearTable gameTable
 
         let verifyGame game =
             let result = TableOperation.Retrieve(game.Developer, game.Name) |> gameTable.Execute
@@ -517,3 +516,14 @@ module DataModification =
             let result = internalType |> Insert |> inGameTable
 
             result.HttpStatusCode |> should equal 204
+
+        interface IDisposable with
+            member __.Dispose() = gameTable.Delete()
+
+    [<Trait("Category", "Remote")>]
+    type ``Data Modification Tests``() = 
+        inherit DataModificationTests(ConnectionStrings.fromEnvironment())
+
+    [<Trait("Category", "Emulator")>]
+    type ``Data Modification Tests (Storage Emulator)``() = 
+        inherit DataModificationTests(ConnectionStrings.storageEmulator)

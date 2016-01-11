@@ -25,6 +25,9 @@ let gitHome = "https://github.com/" + gitOwner
 let gitName = "FSharp.Azure.Storage"
 let gitRaw = environVarOrDefault "gitRaw" "https://raw.github.com/" + gitOwner
 
+let remoteTests = environVarOrDefault "RunRemoteTests" "false" |> Boolean.Parse
+let emulatorTests = environVarOrDefault "RunEmulatorTests" "false" |> Boolean.Parse
+
 //
 //// --------------------------------------------------------------------------------------
 //// The rest of the code is standard F# build script 
@@ -90,6 +93,11 @@ Target "RunTests" (fun _ ->
     |> xUnit2 (fun (p : XUnit2Params) -> 
         { p with
             TimeOut = TimeSpan.FromMinutes 20.
+            Parallel = ParallelMode.NoParallelization
+            ExcludeTraits = 
+                [ if not emulatorTests then yield ("Category", "Emulator")
+                  if not remoteTests then yield ("Category", "Remote") ]
+
             HtmlOutputPath = Some "xunit.html"})
 )
 
