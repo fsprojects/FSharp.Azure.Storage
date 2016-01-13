@@ -10,7 +10,7 @@ async support and generally write in a functional style.
 
 [1]: <https://github.com/Azure/azure-storage-net>
 
-NuGet
+NuGet [![NuGet Status](http://img.shields.io/nuget/v/FSharp.Azure.Storage.svg?style=flat)](https://www.nuget.org/packages/FSharp.Azure.Storage/)
 -----
 `Install-Package FSharp.Azure.Storage`
 
