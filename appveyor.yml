@@ -3,7 +3,7 @@ version: 2.2.0.{build}
 configuration: Release
 
 build_script:
-	- cmd: build.cmd -ef RunRemoteTests
+  - cmd: build.cmd -ef RunRemoteTests
 
 test: off
 
