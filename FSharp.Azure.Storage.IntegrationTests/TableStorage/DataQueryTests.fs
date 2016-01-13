@@ -103,15 +103,14 @@ module DataQuery =
                 |> Seq.choose (fun o -> match o with | null -> None | o -> Some (o.GetHashCode()))
                 |> Seq.reduce (^^^)
 
-
-    type DataQueryTests() = 
-        let account = CloudStorageAccount.Parse "UseDevelopmentStorage=true;"
+    [<AbstractClass>]
+    type DataQueryTests(connectionString : string) = 
+        let account = CloudStorageAccount.Parse connectionString
         let tableClient = account.CreateCloudTableClient()
-        let gameTableName = "TestsGame"
+        let gameTableName = Storage.getTableName()
         let gameTable = tableClient.GetTableReference gameTableName
 
-        do gameTable.DeleteIfExists() |> ignore
-        do gameTable.Create() |> ignore
+        do Storage.clearTable gameTable
 
         let fromGameTable q = fromTable tableClient gameTableName q
         let fromGameTableAsync q = fromTableAsync tableClient gameTableName q
@@ -242,14 +241,10 @@ module DataQuery =
 
             valveGames |> verifyMetadata
 
-        let simpleTableName = "TestsSimple"
-        let fromSimpleTableSegmented = fromTableSegmented tableClient simpleTableName
-        let fromSimpleTableSegmentedAsync = fromTableSegmentedAsync tableClient simpleTableName
-        let createDataForSegmentQueries() = 
+        let createDataForSegmentQueries() =
+            let simpleTableName = Storage.getTableName()
             let simpleTable = tableClient.GetTableReference simpleTableName
-
-            do simpleTable.DeleteIfExists() |> ignore
-            do simpleTable.Create() |> ignore
+            do Storage.clearTable simpleTable
 
             //Storage emulator segments the data after 1000 rows, so generate 1200 rows
             let rows =
@@ -260,49 +255,53 @@ module DataQuery =
                 }
                 |> Array.ofSeq
             do rows |> insertInParallelAndCheckSuccess simpleTableName
-            rows
+            simpleTable, rows
 
         [<Fact>]
         let ``segmented query``() =
-            let rows = createDataForSegmentQueries();
+            let table, rows = createDataForSegmentQueries();
+            try
+                let (simples1, segmentToken1) = 
+                    Query.all<Simple> 
+                    |> fromTableSegmented tableClient table.Name None
 
-            let (simples1, segmentToken1) = 
-                Query.all<Simple> 
-                |> fromSimpleTableSegmented None
+                segmentToken1.IsSome |> should equal true
 
-            segmentToken1.IsSome |> should equal true
+                let (simples2, segmentToken2) = 
+                    Query.all<Simple> 
+                    |> fromTableSegmented tableClient table.Name segmentToken1
 
-            let (simples2, segmentToken2) = 
-                Query.all<Simple> 
-                |> fromSimpleTableSegmented segmentToken1
+                segmentToken2.IsNone |> should equal true
 
-            segmentToken2.IsNone |> should equal true
+                let allSimples = [simples1; simples2] |> Seq.concat |> Seq.toArray
+                allSimples |> verifyRecords rows
+                allSimples |> verifyMetadata
 
-            let allSimples = [simples1; simples2] |> Seq.concat |> Seq.toArray
-            allSimples |> verifyRecords rows
-            allSimples |> verifyMetadata
+            finally table.Delete()
 
         [<Fact>]
         let ``async segmented query``() =
-            let rows = createDataForSegmentQueries();
+            let table, rows = createDataForSegmentQueries();
+            try
+                let (simples1, segmentToken1) = 
+                    Query.all<Simple> 
+                    |> fromTableSegmentedAsync tableClient table.Name None
+                    |> Async.RunSynchronously
 
-            let (simples1, segmentToken1) = 
-                Query.all<Simple> 
-                |> fromSimpleTableSegmentedAsync None
-                |> Async.RunSynchronously
+                segmentToken1.IsSome |> should equal true
 
-            segmentToken1.IsSome |> should equal true
+                let (simples2, segmentToken2) = 
+                    Query.all<Simple> 
+                    |> fromTableSegmentedAsync tableClient table.Name segmentToken1
+                    |> Async.RunSynchronously
 
-            let (simples2, segmentToken2) = 
-                Query.all<Simple> 
-                |> fromSimpleTableSegmentedAsync segmentToken1
-                |> Async.RunSynchronously
+                segmentToken2.IsNone |> should equal true
 
-            segmentToken2.IsNone |> should equal true
+                let allSimples = [simples1; simples2] |> Seq.concat |> Seq.toArray
+                allSimples |> verifyRecords rows
+                allSimples |> verifyMetadata
 
-            let allSimples = [simples1; simples2] |> Seq.concat |> Seq.toArray
-            allSimples |> verifyRecords rows
-            allSimples |> verifyMetadata
+            finally table.Delete()
 
         [<Fact>]
         let ``query with a type that has system properties on it``() =
@@ -453,3 +452,15 @@ module DataQuery =
                 |> fst
 
             game = retrievedGame |> should equal true
+
+        interface IDisposable with
+            member __.Dispose() = gameTable.Delete()
+
+
+    [<Trait("Category", "Remote")>]
+    type ``Data Query Tests`` () =
+        inherit DataQueryTests(ConnectionStrings.fromEnvironment())
+
+    [<Trait("Category", "Emulator")>]
+    type ``Data Query Tests (Storage Emulator)`` () =
+        inherit DataQueryTests(ConnectionStrings.storageEmulator)
