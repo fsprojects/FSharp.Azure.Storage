@@ -89,11 +89,18 @@ For further documentation and examples, please visit the [wiki][2].
 [2]: https://github.com/fsprojects/FSharp.Azure.Storage/wiki
 
 
-Dependencies
-------------
-* F# 3.1 (VS2013)
-* WindowsAzure.Storage v3.1.0.1 - Azure SDK v2.3+ required if you want to use the Storage Emulator
-* FSharp.PowerPack v3.0.0
+Building
+--------
+Run `build.cmd` or `build.sh` to restore the required dependencies using Paket and then build 
+and run tests using FAKE. You can also build in Visual Studio.
+
+In order to run integration tests against the Storage Emulator, pass the `-ef RunEmulatorTests`
+arguments to the build script. To run integration tests against a real storage account, set the
+`FSharpAzureStorageConnectionString` environment variable to a Azure Storage account connection
+string, then pass the `-ef RunRemoteTests` arguments to the build script.
+
+**AppVeyor (Windows)**  
+[![Build status](https://ci.appveyor.com/api/projects/status/ssbhpme5jromcbmo?svg=true)](https://ci.appveyor.com/project/daniel-chambers/fsharp-azure-storage) 
 
 ## Maintainer(s)
 

@@ -51,7 +51,7 @@ Target "AssemblyInfo" (fun _ ->
             Attribute.Title project
             Attribute.Product project
             Attribute.Company "Daniel Chambers & Contributors"
-            Attribute.Copyright "Copyright \169 Daniel Chambers & Contributors 2015"
+            Attribute.Copyright "Copyright \169 Daniel Chambers & Contributors 2016"
             Attribute.Version release.AssemblyVersion
             Attribute.FileVersion release.AssemblyVersion
             Attribute.InternalsVisibleTo "FSharp.Azure.Storage.IntegrationTests"

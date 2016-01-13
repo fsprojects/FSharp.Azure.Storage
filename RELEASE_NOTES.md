@@ -1,3 +1,6 @@
+### 2.2.0
+* TBD
+
 ### 2.1.0
 * DateTime can now be used as a type for properties.
 * Renamed project from FSharp.Azure to FSharp.Azure.Storage.

@@ -112,3 +112,4 @@ UpgradeLog*.XML
 .fake/
 .paket-files/
 xunit.html
+paket-files/
