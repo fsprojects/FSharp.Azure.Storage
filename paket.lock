@@ -2,7 +2,7 @@ REDIRECTS: ON
 NUGET
   remote: https://www.nuget.org/api/v2
   specs:
-    FAKE (4.12.2)
+    FAKE (4.20.0)
     FSharp.Core (3.1.2.5) - redirects: force
     FSharp.Quotations.Evaluator (1.0.7)
     FsUnit.xUnit (1.4.1)
@@ -20,10 +20,10 @@ NUGET
     Microsoft.Net.Http (2.2.29)
       Microsoft.Bcl (>= 1.1.10)
       Microsoft.Bcl.Build (>= 1.0.14)
-    Microsoft.WindowsAzure.ConfigurationManager (3.1.0)
-    Newtonsoft.Json (8.0.1)
+    Microsoft.WindowsAzure.ConfigurationManager (3.2.1)
+    Newtonsoft.Json (8.0.2)
     NuGet.CommandLine (3.3.0)
-    Octokit (0.17.0)
+    Octokit (0.18.0)
       Microsoft.Net.Http
     System.Collections (4.0.10) - framework: dnxcore50
       System.Diagnostics.Debug (>= 4.0.0) - framework: dnxcore50
@@ -197,8 +197,9 @@ NUGET
     xunit.extensions (1.9.0.1566)
       xunit (>= 1.9.0.1566)
     xunit.runner.console (2.1.0)
+    xunit.runner.visualstudio (2.1.0) - version_in_path: true
 GITHUB
   remote: fsharp/FAKE
   specs:
-    modules/Octokit/Octokit.fsx (25f012022dcefdf72f4dd342d08075161512d76a)
+    modules/Octokit/Octokit.fsx (43c4800c5f132d2c2d6832a3a59232a64d83d4c0)
       Octokit
