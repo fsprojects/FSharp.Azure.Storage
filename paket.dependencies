@@ -7,6 +7,7 @@ nuget WindowsAzure.Storage ~> 3.1
 nuget xunit ~> 2.0
 nuget xunit.extensions
 nuget xunit.runner.console
+nuget xunit.runner.visualstudio version_in_path: true
 nuget FsUnit.xUnit
 nuget Nuget.CommandLine
 nuget FAKE
