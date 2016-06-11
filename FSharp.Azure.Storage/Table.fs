@@ -10,7 +10,7 @@ module Table =
     open Microsoft.FSharp.Quotations
     open Microsoft.FSharp.Quotations.Patterns
     open Microsoft.FSharp.Reflection
-    open FSharp.Quotations.Evaluator
+    open Swensen.Unquote
     open Microsoft.WindowsAzure.Storage.Table
     open Utilities
 
@@ -61,14 +61,10 @@ module Table =
             let partitionKeyProperty = getPropertyByAttribute<'T, PartitionKeyAttribute, string>()
             let rowKeyProperty = getPropertyByAttribute<'T, RowKeyAttribute, string>()
 
-            let var = Var("o", typeof<'T>)
-            let pk = Expr.PropertyGet (Expr.Var(var), partitionKeyProperty)
-            let rk = Expr.PropertyGet (Expr.Var(var), rowKeyProperty)
-            
-            let recordInitializer = <@ { PartitionKey = %%pk; RowKey = %%rk } @>
-
-            let quotation = Expr.Cast<'T -> EntityIdentifier>(Expr.Lambda(var, recordInitializer))
-            QuotationEvaluator.Evaluate quotation
+            fun (t:'T) ->
+                let pk = partitionKeyProperty.GetValue(t) :?> string
+                let rk = rowKeyProperty.GetValue(t) :?> string
+                { PartitionKey = pk ; RowKey = rk }
 
         static let defaultGetIdentifier = lazy(
             match typeof<'T> with
@@ -137,8 +133,7 @@ module Table =
         static let tableEntityTypeConstructor = lazy(
             let ctor = typeof<'T>.GetConstructor([||])
             if ctor = null then failwithf "Type %s does not have a parameterless constructor" typeof<'T>.Name
-            let lambda = Expr.Lambda(Var("unit", typeof<unit>), Expr.NewObject(ctor, []))
-            Expr.Cast<unit -> 'T>(lambda) |> QuotationEvaluator.Evaluate)
+            fun () -> ctor.Invoke [||] :?> 'T)
 
         static let resolveTableEntity (pk : string) (rk : string) (timestamp: DateTimeOffset) (properties : IDictionary<string, EntityProperty>) (etag : string) =
             let entity = tableEntityTypeConstructor.Value()
@@ -283,7 +278,7 @@ module Table =
             match expr with
             | Value (o, _) -> Some(ComparisonValue (o))
             | expr when expr.GetFreeVars().Any() -> failwithf "Cannot evaluate %A to a comparison value as it contains free variables" expr
-            | expr -> Some(ComparisonValue (QuotationEvaluator.EvaluateUntyped expr))
+            | expr -> Some(ComparisonValue (evalRaw expr))
 
         let private generateFilterCondition (type' : Type) propertyName op (value : obj) = 
             match value with
