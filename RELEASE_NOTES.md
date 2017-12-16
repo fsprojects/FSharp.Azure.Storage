@@ -1,5 +1,5 @@
 ### 2.2.0
-* TBD
+* Removed dependency on FSPowerPack; Unquote is used to perform expression tree evaluation
 
 ### 2.1.0
 * DateTime can now be used as a type for properties.

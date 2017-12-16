@@ -3,11 +3,13 @@ id FSharp.Azure.Storage
 description
     A library that provides an idiomatic F# API for Microsoft Azure services.
 version
-    2.1.0
+    2.2.0
 authors
-    Daniel Chambers
+    Daniel Chambers & Contributors
+owners
+	Daniel Chambers & Contributors
 copyright
-    Copyright 2015
+    Copyright 2017
 releasenotes
     RELEASE NOTES
 summary
