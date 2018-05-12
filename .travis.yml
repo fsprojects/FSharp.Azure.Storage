@@ -1,7 +1,0 @@
-language: csharp
-
-install:
-
-
-script: 
-  - ./build.sh Default -ef RunRemoteTests

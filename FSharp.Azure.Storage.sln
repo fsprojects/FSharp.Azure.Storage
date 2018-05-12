@@ -1,30 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.24720.0
+# Visual Studio 15
+VisualStudioVersion = 15.0.27428.2037
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".paket", ".paket", "{E5F9EF4A-8E9D-474E-8430-7105553DC28B}"
-	ProjectSection(SolutionItems) = preProject
-		paket.dependencies = paket.dependencies
-		paket.lock = paket.lock
-		.paket\paket.targets = .paket\paket.targets
-	EndProjectSection
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FSharp.Azure.Storage", "src\FSharp.Azure.Storage\FSharp.Azure.Storage.fsproj", "{3173182F-A66D-4648-899C-3143CCCC78F2}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Azure.Storage", "FSharp.Azure.Storage\FSharp.Azure.Storage.fsproj", "{8602C079-A1CF-445B-92C8-BFEB74D7186A}"
-EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Azure.Storage.IntegrationTests", "FSharp.Azure.Storage.IntegrationTests\FSharp.Azure.Storage.IntegrationTests.fsproj", "{327B3691-1385-4DAA-A3B4-278B97717F16}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "project", "project", "{96357C73-EBCB-425F-A39A-D511E8BDBCEA}"
-	ProjectSection(SolutionItems) = preProject
-		.travis.yml = .travis.yml
-		appveyor.yml = appveyor.yml
-		build.cmd = build.cmd
-		build.fsx = build.fsx
-		build.sh = build.sh
-		LICENCE.txt = LICENCE.txt
-		Readme.md = Readme.md
-		RELEASE_NOTES.md = RELEASE_NOTES.md
-	EndProjectSection
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "FSharp.Azure.Storage.Tests", "test\FSharp.Azure.Storage.Tests\FSharp.Azure.Storage.Tests.fsproj", "{13F41971-9521-4148-B511-8C52462AE90B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -32,16 +13,19 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{8602C079-A1CF-445B-92C8-BFEB74D7186A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8602C079-A1CF-445B-92C8-BFEB74D7186A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8602C079-A1CF-445B-92C8-BFEB74D7186A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8602C079-A1CF-445B-92C8-BFEB74D7186A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{327B3691-1385-4DAA-A3B4-278B97717F16}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{327B3691-1385-4DAA-A3B4-278B97717F16}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{327B3691-1385-4DAA-A3B4-278B97717F16}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{327B3691-1385-4DAA-A3B4-278B97717F16}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3173182F-A66D-4648-899C-3143CCCC78F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3173182F-A66D-4648-899C-3143CCCC78F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3173182F-A66D-4648-899C-3143CCCC78F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3173182F-A66D-4648-899C-3143CCCC78F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{13F41971-9521-4148-B511-8C52462AE90B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{13F41971-9521-4148-B511-8C52462AE90B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{13F41971-9521-4148-B511-8C52462AE90B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{13F41971-9521-4148-B511-8C52462AE90B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {23D4C78C-E252-471E-BF33-644AE2EE4857}
 	EndGlobalSection
 EndGlobal

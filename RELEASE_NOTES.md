@@ -1,3 +1,7 @@
+### 3.0.0
+* .NET Standard 2.0 support. NOTE: All sync functions (eg. fromTable, etc) are now sync-over-async functions. See https://github.com/Azure/azure-storage-net/issues/367
+* Fixed bug in fromTableAsync where take count wasn't respected
+
 ### 2.2.0
 * Removed dependency on FSPowerPack; Unquote is used to perform expression tree evaluation
 
