@@ -9,3 +9,17 @@ nuget WindowsAzure.Storage >= 9.0
 //Testing deps
 nuget Expecto
 nuget Microsoft.NET.Test.Sdk
+
+group FakeBuild
+source https://www.nuget.org/api/v2
+storage: none
+
+clitool dotnet-fake
+nuget Fake.Api.GitHub
+nuget Fake.Core.ReleaseNotes
+nuget Fake.Core.Target
+nuget Fake.DotNet.AssemblyInfoFile
+nuget Fake.DotNet.Cli
+nuget Fake.DotNet.Paket
+nuget Fake.IO.FileSystem
+nuget Fake.Tools.Git
