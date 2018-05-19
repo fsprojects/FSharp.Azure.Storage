@@ -1,0 +1,8 @@
+language: csharp
+dotnet: 2.1.200
+install:
+script:
+- "./build.sh"
+env:
+  global:
+    secure: Gpgf52X08QlWrBsKSMLi2X2vMCLdWcC+rl/rKg1lfMcXTAvBo2DDmNWWVHmE1KxlZ7xShWEiQfdK77psKUnVW3A4Fu/II7WRiMtkhYUt85mDG5wlMVqidwNn+U/8diOiwmWBcB+d1/IgLRRC3+nAH3mrVaeDNtGyCHrg43t19zKpo/faxjFqPO4BQmLAwdk8zOso9vauMt6nrHjV6MJXZxjH6UyOtp33aGtGnUwpUKJdsT8SPoBbnZ9rbYeq0YkLQv6q8f+LxCk+tLAWuFHL/3It09w8Fg3bbWgWlaroG4+Y3MYjt2xk9XODJ0P3UXczhcnwXr74fmeXENq8NAkPIz7KK5nA0ZD8y6x30Iflzqy3NuOGwIvRnTOiW2qDhFijW67zbZUU654StS+Cxln8LfcGXWSU6rh0G6Um3bTDDk+kbhwO0SHg3MzoJJK/9MXLfXy+5AKIkkzdJyCj1NLkcBM6SUBlUN/MS6vA/tew+nnn4D6N+BgmOoGaT1Q65vT+ZI6E7ZVvtNp9UZ+SuGxlqcdyDukLQVJhphq84O3of4Bgjy64mMpHNMjExa/yMse0tmwem2qqbmNfQTiZEPL5tJCuDLZ9iVbudaVa5m9JWurEbGbsYsS5Quolcxc8+tg/eDdF9mKsZVtw2s/bIUpviUKQSR7lEj5+VbwLIkvsPvY=
