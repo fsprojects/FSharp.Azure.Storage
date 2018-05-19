@@ -100,7 +100,7 @@ Target.create "GitHubRelease" <| fun _ ->
           yield sprintf "Full changelog [here](https://github.com/fsprojects/FSharp.Azure.Storage/compare/v%s...v%s)" previousReleaseNotes.NugetVersion latestReleaseNotes.NugetVersion ]
 
     GitHub.createClientWithToken gitHubToken
-    |> GitHub.draftNewRelease gitHubOwner gitHubName latestReleaseNotes.NugetVersion (latestReleaseNotes.SemVer.PreRelease <> None) gitHubReleaseNotes
+    |> GitHub.draftNewRelease gitHubOwner gitHubName ("v" + latestReleaseNotes.NugetVersion) (latestReleaseNotes.SemVer.PreRelease <> None) gitHubReleaseNotes
     |> GitHub.publishDraft
     |> Async.RunSynchronously
 
