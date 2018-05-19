@@ -1,6 +1,24 @@
-﻿namespace FSharp.Azure.Storage
+namespace FSharp.Azure.Storage
 
 open System;
+
+module internal Async =
+    let Raise (e : #exn) =
+        Async.FromContinuations(fun (_,econt,_) -> econt e)
+
+    let UnwrapAggregateException a =
+        async {
+            let! result = Async.Catch a
+            return!
+                match result with
+                | Choice1Of2 x -> async.Return x
+                | Choice2Of2 (:? AggregateException as ex) ->
+                    let inners = ex.Flatten().InnerExceptions
+                    if inners.Count > 1
+                    then Raise ex
+                    else Raise inners.[0]
+                | Choice2Of2 ex -> Raise ex
+        }
 
 module internal Seq =
     let split n =
@@ -12,10 +30,9 @@ module internal Seq =
         >> (fun (_, currSeq, seqs) -> currSeq |> Seq.singleton |> Seq.append seqs)
 
 module internal Utilities =
-    
+
     open System.Reflection
-    open Microsoft.FSharp.Reflection
-    
+
     let inline (|?) (lhs: 'a option) rhs = (if lhs.IsSome then lhs.Value else rhs)
     let inline toNullable (opt: 'a option) = if opt.IsSome then Nullable(opt.Value) else Nullable()
     let inline toNullRef (opt: 'a option) = if opt.IsSome then opt.Value else null
@@ -23,7 +40,7 @@ module internal Utilities =
     let inline isNull o = match o with | null -> true | _ -> false
     let inline isNotNull o = match o with | null -> false | _ -> true
 
-    let notImplemented() = 
+    let notImplemented() =
         raise (NotImplementedException())
         Unchecked.defaultof<_>
 
@@ -33,30 +50,30 @@ module internal Utilities =
         else
             null
 
-    let tryGet key (dict : System.Collections.Generic.IDictionary<_,_>) = 
+    let tryGet key (dict : System.Collections.Generic.IDictionary<_,_>) =
         let mutable value = null;
         match dict.TryGetValue (key, &value) with
         | true -> Some value
         | false -> None
 
     let getPropertyByAttribute<'T, 'TAttr, 'TReturn when 'TAttr :> Attribute and 'TAttr : null>() =
-        let properties = 
-            typeof<'T>.GetProperties(BindingFlags.Public ||| BindingFlags.NonPublic ||| BindingFlags.Instance ||| BindingFlags.Static) 
+        let properties =
+            typeof<'T>.GetProperties(BindingFlags.Public ||| BindingFlags.NonPublic ||| BindingFlags.Instance ||| BindingFlags.Static)
             |> Seq.where (fun p -> p.CanRead)
             |> Seq.where (fun p -> p.GetCustomAttribute<'TAttr>() |> isNotNull)
             |> Seq.toList
 
         match properties with
-        | h :: [] when h.PropertyType = typeof<'TReturn> -> h
-        | h :: [] -> failwithf "The property %s on type %s that is marked with %s is not of type %s" h.Name typeof<'T>.Name typeof<'TAttr>.Name typeof<'TReturn>.Name 
-        | h :: t -> failwithf "The type %s contains more than one property with %s" typeof<'T>.Name typeof<'TAttr>.Name
+        | [h] when h.PropertyType = typeof<'TReturn> -> h
+        | [h] -> failwithf "The property %s on type %s that is marked with %s is not of type %s" h.Name typeof<'T>.Name typeof<'TAttr>.Name typeof<'TReturn>.Name
+        | _ :: _ -> failwithf "The type %s contains more than one property with %s" typeof<'T>.Name typeof<'TAttr>.Name
         | [] -> failwithf "The type %s does not contain a property with %s" typeof<'T>.Name typeof<'TAttr>.Name
 
-    
+
     let inline private isOptionType (t : Type) =
         t.IsGenericType && t.GetGenericTypeDefinition() = typedefof<obj option>
 
-    let getUnderlyingTypeIfOption (t : Type) = 
+    let getUnderlyingTypeIfOption (t : Type) =
         if t |> isOptionType then
             t.GetGenericArguments().[0]
         else

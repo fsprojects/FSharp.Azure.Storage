@@ -1,13 +1,3 @@
 @echo off
-
-.paket\paket.bootstrapper.exe
-if errorlevel 1 (
-  exit /b %errorlevel%
-)
-
-.paket\paket.exe restore -v
-if errorlevel 1 (
-  exit /b %errorlevel%
-)
-
-packages\FAKE\tools\FAKE.exe build.fsx %*
+dotnet restore build.proj
+dotnet fake build %*

@@ -22,7 +22,7 @@ Imagine we had a record type that we wanted to save into table storage:
 ```f#
 open FSharp.Azure.Storage.Table
 
-type Game = 
+type Game =
     { [<PartitionKey>] Developer: string
       [<RowKey>] Name: string
       HasMultiplayer: bool }
@@ -67,7 +67,7 @@ let fromGameTable q = fromTable tableClient "Games" q
 Here's how we'd query for an individual record by PartitionKey and RowKey:
 
 ```f#
-let halo4, metadata = 
+let halo4, metadata =
     Query.all<Game>
     |> Query.where <@ fun g s -> s.PartitionKey = "343 Industries" && s.RowKey = "Halo 4" @>
     |> fromGameTable
@@ -77,7 +77,7 @@ let halo4, metadata =
 If we wanted to find all multiplayer games made by Valve:
 
 ```f#
-let multiplayerValveGames = 
+let multiplayerValveGames =
     Query.all<Game>
     |> Query.where <@ fun g s -> s.PartitionKey = "Valve" && g.HasMultiplayer @>
     |> fromGameTable
@@ -91,16 +91,15 @@ For further documentation and examples, please visit the [wiki][2].
 
 Building
 --------
-Run `build.cmd` or `build.sh` to restore the required dependencies using Paket and then build 
-and run tests using FAKE. You can also build in Visual Studio.
+Run `build.cmd` or `build.sh` to restore the required dependencies using Paket and then build and run tests using FAKE. You can also build in Visual Studio.
 
-In order to run integration tests against the Storage Emulator, pass the `-ef RunEmulatorTests`
-arguments to the build script. To run integration tests against a real storage account, set the
-`FSharpAzureStorageConnectionString` environment variable to a Azure Storage account connection
-string, then pass the `-ef RunRemoteTests` arguments to the build script.
+By default, the tests run against the Azure Storage Emulator. However, you can run them against any storage account by setting the `FSHARP_AZURE_STORAGE_CONNECTION_STRING` environment variable to an Azure Storage account connection string before running the tests.
 
-**AppVeyor (Windows)**  
-[![Build status](https://ci.appveyor.com/api/projects/status/ssbhpme5jromcbmo?svg=true)](https://ci.appveyor.com/project/daniel-chambers/fsharp-azure-storage) 
+**AppVeyor (Windows)**
+[![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/ssbhpme5jromcbmo?svg=true)](https://ci.appveyor.com/project/daniel-chambers/fsharp-azure-storage)
+
+**Travis (Linux)**
+[![Travis Build Status](https://travis-ci.org/fsprojects/FSharp.Azure.Storage.svg?branch=master)](https://travis-ci.org/fsprojects/FSharp.Azure.Storage)
 
 ## Maintainer(s)
 

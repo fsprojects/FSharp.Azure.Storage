@@ -1,211 +1,140 @@
-// --------------------------------------------------------------------------------------
-// FAKE build script 
-// --------------------------------------------------------------------------------------
-
-#I "packages/FAKE/tools"
-#r "packages/FAKE/tools/FakeLib.dll"
+#r "paket: groupref FakeBuild //"
+#load "./.fake/build.fsx/intellisense.fsx"
 
 open System
-open System.IO
+open Fake.Core
+open Fake.DotNet
+open Fake.IO
+open Fake.Tools
+open Fake.Api
 
-open Fake 
-open Fake.Git
-open Fake.ReleaseNotesHelper
-open Fake.AssemblyInfoFile
-open Fake.Testing
+#nowarn "52"
 
-// --------------------------------------------------------------------------------------
-// Information about the project to be used at NuGet and in AssemblyInfo files
-// --------------------------------------------------------------------------------------
+let gitHubToken = Environment.environVarOrDefault "GITHUB_TOKEN" ""
+let nugetApiKey = Environment.environVarOrDefault "NUGET_KEY" ""
 
-let project = "FSharp.Azure.Storage"
+let gitHubOwner = "fsprojects"
+let gitHubName = "FSharp.Azure.Storage"
 
-let gitOwner = "fsprojects"
-let gitHome = "https://github.com/" + gitOwner
-let gitName = "FSharp.Azure.Storage"
-let gitRaw = environVarOrDefault "gitRaw" "https://raw.github.com/" + gitOwner
+let releaseNotes =
+    File.read "./RELEASE_NOTES.md"
+    |> ReleaseNotes.parseAll
+let latestReleaseNotes = List.head releaseNotes
+let previousReleaseNotes = List.item 1 releaseNotes
 
-let remoteTests = environVarOrDefault "RunRemoteTests" "false" |> Boolean.Parse
-let emulatorTests = environVarOrDefault "RunEmulatorTests" "false" |> Boolean.Parse
+Target.Description "Creates a version bump commit and tags the commit with the version"
+Target.create "GitCommitAndTag" <| fun _ ->
+    if not <| Git.Information.isCleanWorkingCopy "." then
+        failwith "Please ensure the working copy is clean before performing a release"
 
-//
-//// --------------------------------------------------------------------------------------
-//// The rest of the code is standard F# build script 
-//// --------------------------------------------------------------------------------------
-
-//// Read release notes & version info from RELEASE_NOTES.md
-Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
-let release = parseReleaseNotes (IO.File.ReadAllLines "RELEASE_NOTES.md")
-let nugetVersion = release.NugetVersion
-
-let testAssemblies = [ "**/bin/Release/FSharp.Azure.Storage.IntegrationTests.dll" ]
-
-Target "BuildVersion" (fun _ ->
-    Shell.Exec("appveyor", sprintf "UpdateBuild -Version \"%s\"" nugetVersion) |> ignore
-)
-
-// Generate assembly info files with the right version & up-to-date information
-Target "AssemblyInfo" (fun _ ->
-    let attrs =
-        [ 
-            Attribute.Title project
-            Attribute.Product project
-            Attribute.Company "Daniel Chambers & Contributors"
-            Attribute.Copyright "Copyright \169 Daniel Chambers & Contributors 2016"
-            Attribute.Version release.AssemblyVersion
-            Attribute.FileVersion release.AssemblyVersion
-            Attribute.InternalsVisibleTo "FSharp.Azure.Storage.IntegrationTests"
-        ] 
-
-    !! "**/AssemblyInfo.fs" |> Seq.iter (fun f -> CreateFSharpAssemblyInfo f attrs)
-)
-
-
-// --------------------------------------------------------------------------------------
-// Clean build results & restore NuGet packages
-
-Target "Clean" (fun _ ->
-    CleanDirs <| !! "./**/bin/"
-    CleanDir "./tools/output"
-    CleanDir "./temp"
-)
-
-//
-//// --------------------------------------------------------------------------------------
-//// Build library & test project
-
-let configuration = environVarOrDefault "Configuration" "Release"
-
-Target "Build" (fun () ->
-    // Build the rest of the project
-    { BaseDirectory = __SOURCE_DIRECTORY__
-      Includes = [ project + ".sln" ]
-      Excludes = [] } 
-    |> MSBuild "" "Build" ["Configuration", "Release"]
-    |> Log "AppBuild-Output: ")
-
-// --------------------------------------------------------------------------------------
-// Run the unit tests using test runner & kill test runner when complete
-
-Target "RunTests" (fun _ ->
-    testAssemblies
-    |> Seq.collect (!!)
-    |> xUnit2 (fun (p : XUnit2Params) -> 
-        { p with
-            TimeOut = TimeSpan.FromMinutes 20.
-            Parallel = ParallelMode.NoParallelization
-            ExcludeTraits = 
-                [ if not emulatorTests then yield ("Category", "Emulator")
-                  if not remoteTests then yield ("Category", "Remote") ]
-
-            HtmlOutputPath = Some "xunit.html"})
-)
-
-FinalTarget "CloseTestRunner" (fun _ ->  
-//    ProcessHelper.killProcess "nunit-agent.exe"
-    ()
-)
-
-//
-//// --------------------------------------------------------------------------------------
-//// Build a NuGet package
-
-Target "NuGet" (fun _ ->    
-    Paket.Pack (fun p -> 
-        { p with 
-            ToolPath = ".paket/paket.exe" 
-            OutputPath = "bin/"
-            Version = release.NugetVersion
-            ReleaseNotes = toLines release.Notes })
-)
-
-Target "NuGetPush" (fun _ -> Paket.Push (fun p -> { p with WorkingDir = "bin/" }))
-
-
-// Doc generation
-
-Target "GenerateDocs" (fun _ ->
-    executeFSIWithArgs "docs/tools" "generate.fsx" ["--define:RELEASE"] [] |> ignore
-)
-
-Target "ReleaseDocs" (fun _ ->
-    let tempDocsDir = "temp/gh-pages"
-    let outputDir = "docs/output"
-
-    CleanDir tempDocsDir
-    Repository.cloneSingleBranch "" (gitHome + "/" + gitName + ".git") "gh-pages" tempDocsDir
-    
-    fullclean tempDocsDir
-    ensureDirectory outputDir
-    CopyRecursive outputDir tempDocsDir true |> tracefn "%A"
-    StageAll tempDocsDir
-    Commit tempDocsDir (sprintf "Update generated documentation for version %s" release.NugetVersion)
-    Branches.push tempDocsDir
-)
-
-// Github Releases
-
-#load "paket-files/fsharp/FAKE/modules/Octokit/Octokit.fsx"
-open Octokit
-
-Target "ReleaseGitHub" (fun _ ->
+    let remoteUrl = sprintf "github.com/%s/%s" gitHubOwner gitHubName
     let remote =
         Git.CommandHelper.getGitResult "" "remote -v"
-        |> Seq.filter (fun (s: string) -> s.EndsWith("(push)"))
-        |> Seq.tryFind (fun (s: string) -> s.Contains(gitOwner + "/" + gitName))
-        |> function None -> gitHome + "/" + gitName | Some (s: string) -> s.Split().[0]
+        |> Seq.filter (fun (s: string) -> s.EndsWith "(push)")
+        |> Seq.tryFind (fun (s: string) -> s.Contains remoteUrl)
+        |> function
+            | Some (s: string) -> s.Split().[0]
+            | None -> failwithf "Unable to determine remote for %s" remoteUrl
 
-    //StageAll ""
-    Git.Commit.Commit "" (sprintf "Bump version to %s" release.NugetVersion)
-    Branches.pushBranch "" remote (Information.getBranchName "")
+    Git.Commit.exec "." <| sprintf "Bump version to %s" latestReleaseNotes.NugetVersion
+    Git.Branches.pushBranch "." remote <| Git.Information.getBranchName "."
+    Git.Branches.tag "." <| sprintf "v%s" latestReleaseNotes.NugetVersion
+    Git.Branches.pushTag "." remote latestReleaseNotes.NugetVersion
 
-    Branches.tag "" release.NugetVersion
-    Branches.pushTag "" remote release.NugetVersion
+Target.Description "Generates an AssemblyInfo file with version info"
+Target.create "GenerateAssemblyInfoFile" <| fun _ ->
+    AssemblyInfoFile.createFSharp "./src/FSharp.Azure.Storage/obj/AssemblyInfo.Generated.fs" [
+        AssemblyInfo.Title "FSharp.Azure.Storage"
+        AssemblyInfo.Product "FSharp.Azure.Storage"
+        AssemblyInfo.Company "Daniel Chambers & Contributors"
+        AssemblyInfo.Copyright ("Copyright \169 Daniel Chambers & Contributors " + DateTime.Now.Year.ToString ())
+        AssemblyInfo.Version latestReleaseNotes.AssemblyVersion
+        AssemblyInfo.FileVersion latestReleaseNotes.AssemblyVersion
+        AssemblyInfo.Metadata ("githash", Git.Information.getCurrentHash())
+    ]
 
-    let client =
-        match Environment.GetEnvironmentVariable "OctokitToken" with
-        | null -> 
-            let user =
-                match getBuildParam "github-user" with
-                | s when not (String.IsNullOrWhiteSpace s) -> s
-                | _ -> getUserInput "Username: "
-            let pw =
-                match getBuildParam "github-pw" with
-                | s when not (String.IsNullOrWhiteSpace s) -> s
-                | _ -> getUserPassword "Password: "
+Target.Description "Compiles the project using dotnet build"
+Target.create "Build" <| fun _ ->
+    DotNet.build id "./FSharp.Azure.Storage.sln"
 
-            createClient user pw
-        | token -> createClientWithToken token
+Target.Description "Runs the expecto unit tests"
+Target.create "Test" <| fun _ ->
+    let result = DotNet.exec id "run" "--project ./test/FSharp.Azure.Storage.Tests -c Release"
+    if not result.OK then failwithf "Tests failed with code %i" result.ExitCode
 
-    // release on github
-    client
-    |> createDraft gitOwner gitName release.NugetVersion (release.SemVer.PreRelease <> None) release.Notes
-    |> releaseDraft
+Target.Description "Deletes the contents of the ./bin directory"
+Target.create "PaketClean" <| fun _ ->
+    Shell.cleanDir "./bin"
+
+Target.Description "Creates the NuGet package"
+Target.create "PaketPack" <| fun _ ->
+    Paket.pack <| fun p ->
+        { p with
+            ReleaseNotes = latestReleaseNotes.Notes |> List.map (fun s -> "- " + s) |> String.concat "\n"
+            Version = latestReleaseNotes.NugetVersion
+            OutputPath = "./bin" }
+
+Target.Description "Ensures you have specified your NuGet API key in the NUGET_KEY env var"
+Target.create "ValidateNugetApiKey" <| fun _ ->
+    if String.IsNullOrWhiteSpace nugetApiKey then
+        failwith "Please set the NUGET_KEY environment variable to your NuGet API Key"
+
+Target.Description "Pushes the NuGet package to the package repository"
+Target.create "PaketPush" <| fun _ ->
+    Paket.push <| fun p ->
+        { p with
+            WorkingDir = "./bin"
+            ApiKey = nugetApiKey }
+
+Target.Description "Ensures you have specified your GitHub personal access token in the GITHUB_TOKEN env var"
+Target.create "ValidateGitHubCredentials" <| fun _ ->
+        if String.IsNullOrWhiteSpace gitHubToken then
+            failwith "Please set the GITHUB_TOKEN environment variable to a GitHub personal access token with repo access."
+
+Target.Description "Creates a release on GitHub with the release notes"
+Target.create "GitHubRelease" <| fun _ ->
+    let gitHubReleaseNotes =
+        [ yield "## Changelog"
+          yield! latestReleaseNotes.Notes |> List.map (fun s -> "- " + s)
+          yield ""
+          yield sprintf "Full changelog [here](https://github.com/fsprojects/FSharp.Azure.Storage/compare/v%s...v%s)" previousReleaseNotes.NugetVersion latestReleaseNotes.NugetVersion ]
+
+    GitHub.createClientWithToken gitHubToken
+    |> GitHub.draftNewRelease gitHubOwner gitHubName latestReleaseNotes.NugetVersion (latestReleaseNotes.SemVer.PreRelease <> None) gitHubReleaseNotes
+    |> GitHub.publishDraft
     |> Async.RunSynchronously
-)
 
-// --------------------------------------------------------------------------------------
-// Run all targets by default. Invoke 'build <Target>' to override
+Target.create "BeginRelease" Target.DoNothing
 
-Target "Prepare" DoNothing
-Target "PrepareRelease" DoNothing
-Target "Default" DoNothing
-Target "Release" DoNothing
+Target.create "PublishRelease" Target.DoNothing
 
-"Clean"
-  ==> "AssemblyInfo"
-  ==> "Prepare"
-  ==> "Build"
-  ==> "RunTests"
-  ==> "Default"
+open Fake.Core.TargetOperators
 
-"Build"
-  ==> "PrepareRelease"
-//  ==> "GenerateDocs"
-//  ==> "ReleaseDocs"
-  ==> "NuGet"
-  ==> "NuGetPush"
-  ==> "ReleaseGithub"
-  ==> "Release"
+"GitCommitAndTag"
+?=> "GenerateAssemblyInfoFile"
+==> "Build"
+==> "Test"
+==> "PaketClean"
+==> "PaketPack"
+==> "BeginRelease"
+==> "PaketPush"
+==> "GitHubRelease"
+==> "PublishRelease"
 
-RunTargetOrDefault "Default"
+"ValidateGitHubCredentials"
+?=> "BeginRelease"
+
+"ValidateGitHubCredentials"
+==> "GitHubRelease"
+
+"ValidateNugetApiKey"
+?=> "BeginRelease"
+
+"ValidateNugetApiKey"
+==> "PaketPush"
+
+// Only do a GitCommitAndTag if we're pushing a new version
+"GitCommitAndTag"
+==> "PaketPush"
+
+Target.runOrDefault "PaketPack"

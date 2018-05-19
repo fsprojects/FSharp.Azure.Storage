@@ -1,4 +1,4 @@
-﻿namespace FSharp.Azure.Storage
+namespace FSharp.Azure.Storage
 
 open System;
 
@@ -18,7 +18,7 @@ module Table =
 
     [<AllowNullLiteralAttribute>]
     type PartitionKeyAttribute () = inherit Attribute()
-        
+
     [<AllowNullLiteralAttribute>]
     type RowKeyAttribute () = inherit Attribute()
 
@@ -26,7 +26,7 @@ module Table =
     type OperationResult = { HttpStatusCode : int; Etag : string }
     type EntityMetadata = { Etag : string; Timestamp : DateTimeOffset }
 
-    type IEntityIdentifiable = 
+    type IEntityIdentifiable =
         abstract member GetIdentifier : unit -> EntityIdentifier
 
     type Operation<'T> =
@@ -39,7 +39,7 @@ module Table =
         | ForceMerge of entity : 'T
         | Delete of entity : 'T * etag : string
         | ForceDelete of entity : 'T
-        member this.GetEntity() = 
+        member this.GetEntity() =
             match this with
             | Insert (entity) -> entity
             | InsertOrMerge (entity) -> entity
@@ -69,38 +69,38 @@ module Table =
         static let defaultGetIdentifier = lazy(
             match typeof<'T> with
             | t when typeof<IEntityIdentifiable>.IsAssignableFrom t -> fun (e : 'T) -> (box e :?> IEntityIdentifiable).GetIdentifier()
-            | t when typeof<ITableEntity>.IsAssignableFrom t -> fun (e : 'T) -> 
+            | t when typeof<ITableEntity>.IsAssignableFrom t -> fun (e : 'T) ->
                 let tableEntity = (box e :?> ITableEntity)
                 { PartitionKey = tableEntity.PartitionKey; RowKey = tableEntity.RowKey }
             | _ -> buildIdentiferFromAttributesFunc())
-                    
+
         static let mutable getIdentifier = fun g -> defaultGetIdentifier.Value g
 
         static member GetIdentifier with get() = getIdentifier and set fn = getIdentifier <- fn
 
     type private RecordTableEntityWrapper<'T>(record : 'T, identifier, etag) =
-        static let recordFields = 
+        static let recordFields =
             FSharpType.GetRecordFields (typeof<'T>, true)
-        static let recordReader = 
+        static let recordReader =
             FSharpValue.PreComputeRecordReader (typeof<'T>, true)
-        static let recordWriter = 
+        static let recordWriter =
             FSharpValue.PreComputeRecordConstructor (typeof<'T>, true) >> (fun o -> o :?> 'T)
 
         static member ResolveRecord (pk : string) (rk : string) (timestamp: DateTimeOffset) (properties : IDictionary<string, EntityProperty>) (etag : string) =
-            let propValues = 
-                recordFields 
-                |> Seq.map (fun f -> 
+            let propValues =
+                recordFields
+                |> Seq.map (fun f ->
                     match properties |> tryGet f.Name with
-                    | Some prop -> 
+                    | Some prop ->
                         let underlyingPropertyType = getUnderlyingTypeIfOption f.PropertyType
                         match prop.PropertyAsObject with
                         | null -> runtimeGetUncheckedDefault f.PropertyType
                         | value when value.GetType() = typeof<DateTime> && underlyingPropertyType = typeof<DateTimeOffset> ->
                             DateTimeOffset(value :?> DateTime) |> wrapIfOption f.PropertyType
-                        | value when value.GetType() <> underlyingPropertyType -> 
+                        | value when value.GetType() <> underlyingPropertyType ->
                             failwithf "The property %s on type %s of type %s has deserialized as the incorrect type %s" f.Name typeof<'T>.Name f.PropertyType.Name (value.GetType().Name)
                         | value -> value |> wrapIfOption f.PropertyType
-                    | None -> 
+                    | None ->
                         match f.Name with
                         | "PartitionKey" when f.PropertyType = typeof<string> -> pk :> obj
                         | "RowKey" when f.PropertyType = typeof<string> -> rk :> obj
@@ -117,11 +117,11 @@ module Table =
             member val ETag : string = etag with get, set
             member val Timestamp : DateTimeOffset = Unchecked.defaultof<_> with get, set
 
-            member this.ReadEntity(_, _) =
+            member __.ReadEntity(_, _) =
                 notImplemented()
 
-            member this.WriteEntity(_) = 
-                record 
+            member __.WriteEntity(_) =
+                record
                 |> recordReader
                 |> Seq.map (unwrapIfOption >> EntityProperty.CreateEntityPropertyFromObject)
                 |> Seq.zip (recordFields |> Seq.map (fun p -> p.Name))
@@ -129,7 +129,7 @@ module Table =
                 |> dict
 
     [<AbstractClass; Sealed>]
-    type private EntityTypeCache<'T> private () = 
+    type private EntityTypeCache<'T> private () =
         static let tableEntityTypeConstructor = lazy(
             let ctor = typeof<'T>.GetConstructor([||])
             if ctor = null then failwithf "Type %s does not have a parameterless constructor" typeof<'T>.Name
@@ -155,19 +155,19 @@ module Table =
             RecordTableEntityWrapper (record, eId, etag) |> tableOperation
 
         static member val PropertyNames = lazy (
-            let getTableEntityProperty (p : PropertyInfo) = 
+            let getTableEntityProperty (p : PropertyInfo) =
                 match p.GetCustomAttribute<IgnorePropertyAttribute>() with
                 | null when p.Name <> "ETag" -> Some (p.Name) //ETag is not an entity property to be queried
                 | _ -> None
 
             match typeof<'T> with
-            | t when typeof<ITableEntity>.IsAssignableFrom t -> 
+            | t when typeof<ITableEntity>.IsAssignableFrom t ->
                 t.GetProperties()
                 |> Seq.choose getTableEntityProperty
                 |> Set.ofSeq
-            | t when isRecordType t -> 
-                RecordTableEntityWrapper<'T>.RecordFields 
-                |> Seq.map (fun p -> p.Name) 
+            | t when isRecordType t ->
+                RecordTableEntityWrapper<'T>.RecordFields
+                |> Seq.map (fun p -> p.Name)
                 |> Set.ofSeq
             | t -> failwithf "Type %s must be either an ITableEntity or an F# record type" t.Name
             )
@@ -184,12 +184,12 @@ module Table =
                 | t when isRecordType t -> createTableOperationFromRecord
                 | _ -> failwithf "Type %s must be either an ITableEntity or an F# record type" typeof<'T>.Name)
 
-    type EntityQuery<'T> = 
+    type EntityQuery<'T> =
         { Filter : string
           TakeCount : int option
           SelectColumns : string Set }
-        static member get_Zero() : EntityQuery<'T> = 
-            { Filter = "" 
+        static member get_Zero() : EntityQuery<'T> =
+            { Filter = ""
               TakeCount = None
               SelectColumns = EntityTypeCache<'T>.PropertyNames.Value }
         static member (+) (left : EntityQuery<'T>, right : EntityQuery<'T>) =
@@ -199,7 +199,7 @@ module Table =
                 | l, "" -> l
                 | "", r -> r
                 | l, r -> TableQuery.CombineFilters (l, "and", r)
-            let takeCount = 
+            let takeCount =
                 match left.TakeCount, right.TakeCount with
                 | Some l, Some r -> Some (min l r)
                 | Some l, None -> Some l
@@ -209,14 +209,14 @@ module Table =
 
             { Filter = filter; TakeCount = takeCount; SelectColumns = selectColumns }
 
-        member this.ToTableQuery() = 
+        member this.ToTableQuery() =
             TableQuery (
-                FilterString = this.Filter, 
+                FilterString = this.Filter,
                 TakeCount = (this.TakeCount |> toNullable),
                 SelectColumns = (this.SelectColumns |> Set.toArray))
-                
 
-    module Query = 
+
+    module Query =
         open DerivedPatterns
 
         type SystemProperties =
@@ -231,7 +231,7 @@ module Table =
             | LessThan
             | LessThanOrEqual
             | NotEqual
-            member this.CommutativeInvert() = 
+            member this.CommutativeInvert() =
                 match this with
                 | GreaterThan -> LessThan
                 | GreaterThanOrEqual -> LessThanOrEqual
@@ -239,8 +239,8 @@ module Table =
                 | LessThanOrEqual -> GreaterThanOrEqual
                 | Equals -> Equals
                 | NotEqual -> NotEqual
-            
-        let private toOperator comparison = 
+
+        let private toOperator comparison =
             match comparison with
             | Equals -> QueryComparisons.Equal
             | GreaterThan -> QueryComparisons.GreaterThan
@@ -264,13 +264,13 @@ module Table =
 
         let private (|PropertyComparison|_|) (expr : Expr) =
             match expr with
-            | ComparisonOp (op, PropertyGet (Some (Var(v)), prop, []), valExpr) -> 
+            | ComparisonOp (op, PropertyGet (Some (Var(v)), prop, []), valExpr) ->
                 Some (PropertyComparison (v, prop, op, valExpr))
-            | ComparisonOp (op, valExpr, PropertyGet (Some (Var(v)), prop, [])) -> 
+            | ComparisonOp (op, valExpr, PropertyGet (Some (Var(v)), prop, [])) ->
                 Some (PropertyComparison (v, prop, op.CommutativeInvert(), valExpr))
-            | PropertyGet (Some (Var(v)), prop, []) when prop.PropertyType = typeof<bool> -> 
+            | PropertyGet (Some (Var(v)), prop, []) when prop.PropertyType = typeof<bool> ->
                 Some (PropertyComparison (v, prop, Equals, Expr.Value(true)))
-            | SpecificCall <@ not @> (None, _, [ PropertyGet (Some (Var(v)), prop, []) ]) when prop.PropertyType = typeof<bool> -> 
+            | SpecificCall <@ not @> (None, _, [ PropertyGet (Some (Var(v)), prop, []) ]) when prop.PropertyType = typeof<bool> ->
                 Some (PropertyComparison (v, prop, Equals, Expr.Value(false)))
             | _ -> None
 
@@ -280,7 +280,7 @@ module Table =
             | expr when expr.GetFreeVars().Any() -> failwithf "Cannot evaluate %A to a comparison value as it contains free variables" expr
             | expr -> Some(ComparisonValue (evalRaw expr))
 
-        let private generateFilterCondition (type' : Type) propertyName op (value : obj) = 
+        let private generateFilterCondition (type' : Type) propertyName op (value : obj) =
             match value with
             | null -> failwithf "Null comparison is not supported by table storage (property: %s)" propertyName
             | :? string as v -> TableQuery.GenerateFilterCondition (propertyName, op |> toOperator, v)
@@ -309,13 +309,13 @@ module Table =
             | _ -> false
 
         let private buildPropertyFilter entityVar sysPropVar expr =
-            let rec buildPropertyFilterRec expr = 
+            let rec buildPropertyFilterRec expr =
                 match expr with
-                | AndAlso (left, right) -> 
+                | AndAlso (left, right) ->
                     TableQuery.CombineFilters(buildPropertyFilterRec left, "and", buildPropertyFilterRec right)
-                | OrElse (left, right) -> 
+                | OrElse (left, right) ->
                     TableQuery.CombineFilters(buildPropertyFilterRec left, "or", buildPropertyFilterRec right)
-                | SpecificCall <@ not @> (None, _, [nottedExpr]) when not (nottedExpr |> isPropertyComparisonAgainstBool) -> 
+                | SpecificCall <@ not @> (None, _, [nottedExpr]) when not (nottedExpr |> isPropertyComparisonAgainstBool) ->
                     notFilter (buildPropertyFilterRec nottedExpr)
                 | PropertyComparison (v, prop, op, ComparisonValue (value)) ->
                     if v <> entityVar && v <> sysPropVar then
@@ -334,12 +334,12 @@ module Table =
 
         let all<'T> : EntityQuery<'T> = EntityQuery.get_Zero()
 
-        let where (expr : Expr<'T -> SystemProperties -> bool>) (query : EntityQuery<'T>) = 
+        let where (expr : Expr<'T -> SystemProperties -> bool>) (query : EntityQuery<'T>) =
             [ query; { EntityQuery<'T>.get_Zero() with Filter = expr |> makePropertyFilter } ] |> List.reduce (+)
 
         let take count (query : EntityQuery<'T>) =
             [ query; { EntityQuery<'T>.get_Zero() with TakeCount = Some count } ] |> List.reduce (+)
-        
+
 
     let convertToTableOperation operation =
         match operation with
@@ -353,32 +353,27 @@ module Table =
         | Delete (entity, etag) -> EntityTypeCache.CreateTableOperation.Value TableOperation.Delete entity etag
         | ForceDelete (entity) -> EntityTypeCache.CreateTableOperation.Value TableOperation.Delete entity "*"
 
-    let private createBatchOperation operations = 
+    let private createBatchOperation operations =
         let batchOperation = TableBatchOperation()
         do operations |> Seq.map convertToTableOperation |> Seq.iter batchOperation.Add
         batchOperation
 
-    let private convertToOperationResult (result : TableResult) = 
+    let private convertToOperationResult (result : TableResult) =
         { HttpStatusCode = result.HttpStatusCode; Etag = result.Etag }
 
+    let inline private syncOverAsync a =
+        a |> Async.UnwrapAggregateException |> Async.RunSynchronously
 
-    let inTable (client: CloudTableClient) tableName operation = 
-        let table = client.GetTableReference tableName
-        operation |> convertToTableOperation |> table.Execute |> convertToOperationResult
-
-    let inTableAsync (client: CloudTableClient) tableName operation = 
+    let inTableAsync (client: CloudTableClient) tableName operation =
         async {
             let table = client.GetTableReference tableName
             let tableOperation = operation |> convertToTableOperation
             let! result = tableOperation |> table.ExecuteAsync |> Async.AwaitTask
             return result |> convertToOperationResult
         }
-        
-    let inTableAsBatch (client: CloudTableClient) tableName operations =
-        let table = client.GetTableReference tableName
-        let batchOperation = operations |> createBatchOperation
-        let results = batchOperation |> table.ExecuteBatch
-        results |> Seq.map convertToOperationResult |> Seq.toList
+
+    let inTable client tableName operation =
+        inTableAsync client tableName operation |> syncOverAsync
 
     let inTableAsBatchAsync (client: CloudTableClient) tableName operations =
         async {
@@ -388,10 +383,13 @@ module Table =
             return results |> Seq.map convertToOperationResult |> Seq.toList
         }
 
+    let inTableAsBatch client tableName operations =
+        inTableAsBatchAsync client tableName operations |> syncOverAsync
+
     let private validateNoDuplicateRowKeys pk ops =
-        let duplicates = 
-            ops 
-            |> Seq.countBy (fun (eId, _) -> eId.RowKey) 
+        let duplicates =
+            ops
+            |> Seq.countBy (fun (eId, _) -> eId.RowKey)
             |> Seq.filter (fun (_, count) -> count > 1)
             |> Seq.cache
         if duplicates |> Seq.isEmpty |> not then
@@ -399,50 +397,53 @@ module Table =
             failwithf "Cannot automatically batch operations because multiple entities addressing the same rows exist for partition '%s' with row keys:%s" pk dupStr
         else ops
 
-    let autobatch operations = 
-        operations 
+    let autobatch operations =
+        operations
         |> Seq.map (fun o -> o |> getOperationEntity |> EntityIdentiferReader.GetIdentifier, o)
         |> Seq.groupBy (fun (eId, _) -> eId.PartitionKey)
-        |> Seq.map (fun (pk, ops) -> 
+        |> Seq.collect (fun (pk, ops) ->
             ops
             |> validateNoDuplicateRowKeys pk
-            |> Seq.map snd 
-            |> Seq.split MaxBatchSize 
+            |> Seq.map snd
+            |> Seq.split MaxBatchSize
             |> Seq.map Seq.toList)
-        |> Seq.concat
         |> Seq.toList
-            
-    let fromTable (client: CloudTableClient) tableName (query : EntityQuery<'T>) =
-        let table = client.GetTableReference tableName
-        let tableQuery = query.ToTableQuery()
-        let resolver = EntityTypeCache.Resolver.Value //Do not inline this otherwise FSharp will delay execution of .Value until the resolver delegate is called
-        table.ExecuteQuery<'T * EntityMetadata>(tableQuery, resolver)
-
-    let fromTableSegmented (client: CloudTableClient) tableName continuationToken (query : EntityQuery<'T>) =
-        let table = client.GetTableReference tableName
-        let tableQuery = query.ToTableQuery()
-        let resolver = EntityTypeCache.Resolver.Value //Do not inline this otherwise FSharp will delay execution of .Value until the resolver delegate is called
-        let result = table.ExecuteQuerySegmented<'T * EntityMetadata>(tableQuery, resolver, continuationToken |> toNullRef)
-        result.Results, result.ContinuationToken |> toOption
 
     let fromTableSegmentedAsync (client: CloudTableClient) tableName continuationToken (query : EntityQuery<'T>) =
         let table = client.GetTableReference tableName
         let tableQuery = query.ToTableQuery()
         let resolver = EntityTypeCache.Resolver.Value //Do not inline this otherwise FSharp will delay execution of .Value until the resolver delegate is called
         async {
-            let! result = table.ExecuteQuerySegmentedAsync<'T * EntityMetadata>(tableQuery, resolver, continuationToken |> toNullRef) |> Async.AwaitTask
+            let! result = table.ExecuteQuerySegmentedAsync<'T * EntityMetadata>(tableQuery, EntityResolver(resolver), continuationToken |> toNullRef) |> Async.AwaitTask
             return result.Results, result.ContinuationToken |> toOption
         }
 
     let fromTableAsync (client: CloudTableClient) tableName (query : EntityQuery<'T>) =
-        let rec getSegmentAsync continutationToken resultsList =
+        let rec getSegmentAsync continutationToken resultsLength resultsList =
             async {
                 let! result, furtherContinuation = query |> fromTableSegmentedAsync client tableName continutationToken
                 match furtherContinuation with
-                | Some _ -> return! result :: resultsList |> getSegmentAsync furtherContinuation
-                | None -> return result :: resultsList
+                | Some _ ->
+                    //When using segmentation, the table storage take param is applied to each segment not to the entire resultset
+                    //So we need to keep track of how many results we want to actually take and stop early if necessary
+                    let takeCount = query.TakeCount |> Option.defaultValue Int32.MaxValue
+                    let newResultsLength = resultsLength + result.Count
+                    if newResultsLength = takeCount then
+                        return result :> seq<_> :: resultsList
+                    elif newResultsLength > takeCount then
+                        return result.Take(takeCount - resultsLength) :: resultsList
+                    else
+                        return! result :> seq<_> :: resultsList |> getSegmentAsync furtherContinuation newResultsLength
+                | None ->
+                    return result :> seq<_> :: resultsList
             }
         async {
-            let! resultsList = getSegmentAsync None []
+            let! resultsList = getSegmentAsync None 0 []
             return resultsList |> List.rev |> Seq.concat
         }
+
+    let fromTable client tableName query =
+        fromTableAsync client tableName query |> syncOverAsync
+
+    let fromTableSegmented client tableName continuationToken query =
+        fromTableSegmentedAsync client tableName continuationToken query |> syncOverAsync

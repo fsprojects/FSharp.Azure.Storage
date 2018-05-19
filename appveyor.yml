@@ -1,12 +1,13 @@
-version: 2.2.0.{build}
+version: 3.0.0.{build}
+image: Visual Studio 2017
 
 configuration: Release
 
 build_script:
-  - cmd: build.cmd -ef RunRemoteTests
+  - cmd: build.cmd
 
 test: off
 
 environment:
-  FSharpAzureStorageConnectionString:
+  FSHARP_AZURE_STORAGE_CONNECTION_STRING:
     secure: saFGdmViFU9yF3vNqonOY3deDHBkMvgI9OYOGP7Z3InBi8bu78K6Xthr6f7YEiL2VP2B/jN09WmGst38hNv9JUDErf1ocd5uZ1i77Q74pFEstEzDAu8YheP2bZa8Sgso+wwx+SXs9Zgrf/7N2xrWqy/Tep2wrSuUwHRZV2K4+ZhkqbL2+gDsPGPuu88Pqcg580WI+yAo4T3ghjxauaoZJX1LXPlnLgpdReSCVT88cvo=

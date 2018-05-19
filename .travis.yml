@@ -1,7 +1,8 @@
 language: csharp
-
+dotnet: 2.1.200
 install:
-
-
-script: 
-  - ./build.sh Default -ef RunRemoteTests
+script:
+- "./build.sh"
+env:
+  global:
+    secure: XO8yibwD6X+vtdkiqRCSozbFQD9wFLiG+SOlyeW3qSzlYUyVjrACy5OEqvfsXl+biX0SpHE9//Q0XxAg0L3L8W7R60jTxuqiFMK0Bpco7Kb8IghHVpi1DXMb+bD1PZ6J8+tAhKa4kl4n0a+o4UiLK6meXRUqBVGa8w+1Nq+8KtjqDgxb3BwGvzWKScaraugbkpG5uD9SnJaB8rjpw8Vx19QFUvIq7tw/Xs4hsdRkw6d4OyHeqMJwTrnTuMHlRjdnzFalv1oozrVFaJK7woByE3hohEHTxinIc4eCzFS/fgy6HevkkH574Y3ysbANlTVS5s3ZMqQgL9nNV3pImusr0C7ruq1BdS9cM/e9rHOapEXzgvDcwlq3OJhY7lWF9v8c0RIPHdn4vFe78WWcbnxHNlAOkVPRTGFPJKst0mPrEsyiCgGu2vJH15loehoSumWiCFPzUvQR+dpC5bKHWjdjAsGqk/vPiNWsVOk9G0XSJnNKwE0v++Tvs+co9+FMFfl56KSghGjj3WlESH604Rx/1UB4Z+A0ZXoirZSbaRbf8DYNkFh3+2Ocr0he4Ku8JUJOtWcRI0VNTpNMm3BDKJjMT8c59phfMnkubdKYjxcj/GNjpcK4XI3mnm07CqgOBLJaH0O5AACfFNU/DYl2BC8z8LAdVi8MRINqPcz7MIMbXJs=

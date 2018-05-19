@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp2.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/FSharp.Azure.Storage/FSharp.Azure.Storage.fsproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="Utilities.fs" />
+    <Compile Include="Table/QueryExpressionTests.fs" />
+    <Compile Include="Table/DataQueryTests.fs" />
+    <Compile Include="Table/DataModificationTests.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <Import Project="..\..\.paket\Paket.Restore.targets" />
+</Project>
