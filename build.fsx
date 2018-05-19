@@ -22,8 +22,8 @@ let releaseNotes =
 let latestReleaseNotes = List.head releaseNotes
 let previousReleaseNotes = List.item 1 releaseNotes
 
-Target.Description "Creates a version bump commit and tags the commit with the version"
-Target.create "GitCommitAndTag" <| fun _ ->
+Target.Description "Tags the current commit with the version and pushes the tag"
+Target.create "GitTagAndPush" <| fun _ ->
     if not <| Git.Information.isCleanWorkingCopy "." then
         failwith "Please ensure the working copy is clean before performing a release"
 
@@ -36,10 +36,10 @@ Target.create "GitCommitAndTag" <| fun _ ->
             | Some (s: string) -> s.Split().[0]
             | None -> failwithf "Unable to determine remote for %s" remoteUrl
 
-    Git.Commit.exec "." <| sprintf "Bump version to %s" latestReleaseNotes.NugetVersion
+    let tag = sprintf "v%s" latestReleaseNotes.NugetVersion
     Git.Branches.pushBranch "." remote <| Git.Information.getBranchName "."
-    Git.Branches.tag "." <| sprintf "v%s" latestReleaseNotes.NugetVersion
-    Git.Branches.pushTag "." remote latestReleaseNotes.NugetVersion
+    Git.Branches.tag "." tag
+    Git.Branches.pushTag "." remote tag
 
 Target.Description "Generates an AssemblyInfo file with version info"
 Target.create "GenerateAssemblyInfoFile" <| fun _ ->
@@ -110,7 +110,7 @@ Target.create "PublishRelease" Target.DoNothing
 
 open Fake.Core.TargetOperators
 
-"GitCommitAndTag"
+"GitTagAndPush"
 ?=> "GenerateAssemblyInfoFile"
 ==> "Build"
 ==> "Test"
@@ -133,8 +133,8 @@ open Fake.Core.TargetOperators
 "ValidateNugetApiKey"
 ==> "PaketPush"
 
-// Only do a GitCommitAndTag if we're pushing a new version
-"GitCommitAndTag"
+// Only do a GitTagAndPush if we're pushing a new version
+"GitTagAndPush"
 ==> "PaketPush"
 
 Target.runOrDefault "PaketPack"
