@@ -100,7 +100,10 @@ arguments to the build script. To run integration tests against a real storage a
 string, then pass the `-ef RunRemoteTests` arguments to the build script.
 
 **AppVeyor (Windows)**
-[![Build status](https://ci.appveyor.com/api/projects/status/ssbhpme5jromcbmo?svg=true)](https://ci.appveyor.com/project/daniel-chambers/fsharp-azure-storage)
+[![AppVeyor Build status](https://ci.appveyor.com/api/projects/status/ssbhpme5jromcbmo?svg=true)](https://ci.appveyor.com/project/daniel-chambers/fsharp-azure-storage)
+
+**Travis (Linux)**
+[![Travis Build Status](https://travis-ci.org/fsprojects/FSharp.Azure.Storage.svg?branch=master)](https://travis-ci.org/fsprojects/FSharp.Azure.Storage)
 
 ## Maintainer(s)
 
