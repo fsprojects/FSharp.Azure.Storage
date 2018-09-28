@@ -90,6 +90,7 @@ module internal Utilities =
         | :? (double option) as opt -> opt.Value :> obj
         | :? (Guid option) as opt -> opt.Value :> obj
         | :? (int option) as opt -> opt.Value :> obj
+        | :? (Uri option) as opt -> opt.Value :> obj
         | other -> other
 
     let wrapIfOption (t : Type) (o : obj) =
@@ -104,5 +105,6 @@ module internal Utilities =
             | :? double as v -> Some v :> obj
             | :? Guid as v -> Some v :> obj
             | :? int as v -> Some v :> obj
+            | :? Uri as v -> Some v :> obj
             | other -> other
         else o

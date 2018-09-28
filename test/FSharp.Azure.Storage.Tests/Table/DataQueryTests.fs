@@ -29,6 +29,23 @@ type GameWithOptions =
         member g.GetIdentifier() =
             { PartitionKey = g.Developer; RowKey = g.Name + "-" + g.Platform }
 
+type GameWithUri =
+    { Name: string
+      Developer : string
+      HasMultiplayer: bool
+      Website : Uri }
+
+      interface IEntityIdentifiable with
+        member g.GetIdentifier() =
+            { PartitionKey = g.Developer; RowKey = g.Name}
+type GameWithUriOptions =
+    { Name: string
+      Developer : string
+      Website: Uri option}
+
+      interface IEntityIdentifiable with
+        member g.GetIdentifier() =
+            { PartitionKey = g.Developer; RowKey = g.Name }
 type Game =
     { Name: string
       Platform: string
@@ -455,5 +472,43 @@ let tests connectionString =
                 |> fst
 
             retrievedGame |> Expect.equal "Retrieved game should be correct" game
+            
+        gameTestCase "querying for a record type with URI works" <| fun ts ->
+                    let game =
+                        { GameWithUri.Name = "Transistor"
+                          Developer = "Supergiant Games"
+                          HasMultiplayer = true 
+                          Website = Uri ("https://example.org")}
+        
+                    let result = game |> Insert |> inTable tableClient ts.Name
+                    result.HttpStatusCode |> Expect.equal "Status code should be 204" 204
+        
+                    let retrievedGame =
+                        Query.all<GameWithUri>
+                        |> Query.where <@ fun _ s -> s.PartitionKey = game.Developer && s.RowKey = game.Name @>
+                        |> ts.FromGameTable
+                        |> Seq.head
+                        |> fst
+        
+                    retrievedGame |> Expect.equal "Retrieved game should be correct" game
+                    
+                    
+        gameTestCase "querying for a record type with URI option works" <| fun ts ->
+                    let game =
+                        { GameWithUriOptions.Name = "Transistor"
+                          Developer = "Supergiant Games"
+                          Website = Some (Uri ("https://example.org"))}
+        
+                    let result = game |> Insert |> inTable tableClient ts.Name
+                    result.HttpStatusCode |> Expect.equal "Status code should be 204" 204
+        
+                    let retrievedGame =
+                        Query.all<GameWithUriOptions>
+                        |> Query.where <@ fun _ s -> s.PartitionKey = game.Developer && s.RowKey = game.Name @>
+                        |> ts.FromGameTable
+                        |> Seq.head
+                        |> fst
+        
+                    retrievedGame |> Expect.equal "Retrieved game should be correct" game
 
     ]
