@@ -405,6 +405,20 @@ let tests connectionString =
                 |> fst
 
             retrievedGame |> Expect.equal "Retrieved game should be correct" game
+            
+            
+        gameTestCase "querying for a record that has option type fields with none value works when filtering by the option-types properties" <| fun ts ->
+                    let game =
+                        { Name = "Transistor"
+                          Platform = "PC"
+                          Developer = "Supergiant Games"
+                          HasMultiplayer = None
+                          Notes = Some "From the same studio that made Bastion" }
+        
+                    let result = game |> Insert |> inTable tableClient ts.Name
+                    result.HttpStatusCode |> Expect.equal "Status code should be 204" 204              
+        
+                    (fun () -> Query.all<GameWithOptions> |> Query.where <@ fun g _ -> g.HasMultiplayer = None && g.Notes = game.Notes @> |> ignore) |> Expect.throwsT<Exception> "Throws exception" 
 
         gameTestCase "querying for a record type that is internal works" <| fun ts ->
             let game =
