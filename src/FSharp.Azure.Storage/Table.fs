@@ -22,6 +22,12 @@ module Table =
     [<AllowNullLiteralAttribute>]
     type RowKeyAttribute () = inherit Attribute()
 
+    [<AllowNullLiteralAttribute>]
+    type EtagAttribute () = inherit Attribute()
+
+    [<AllowNullLiteralAttribute>]
+    type TimestampAttribute () = inherit Attribute()
+
     type EntityIdentifier = { [<PartitionKey>] PartitionKey : string; [<RowKey>] RowKey : string; }
     type OperationResult = { HttpStatusCode : int; Etag : string }
     type EntityMetadata = { Etag : string; Timestamp : DateTimeOffset }
@@ -60,6 +66,7 @@ module Table =
         static let buildIdentiferFromAttributesFunc() =
             let partitionKeyProperty = getPropertyByAttribute<'T, PartitionKeyAttribute, string>()
             let rowKeyProperty = getPropertyByAttribute<'T, RowKeyAttribute, string>()
+
 
             fun (t:'T) ->
                 let pk = partitionKeyProperty.GetValue(t) :?> string
@@ -101,10 +108,12 @@ module Table =
                             failwithf "The property %s on type %s of type %s has deserialized as the incorrect type %s" f.Name typeof<'T>.Name f.PropertyType.Name (value.GetType().Name)
                         | value -> value |> wrapIfOption f.PropertyType
                     | None ->
-                        match f.Name with
-                        | "PartitionKey" when f.PropertyType = typeof<string> -> pk :> obj
-                        | "RowKey" when f.PropertyType = typeof<string> -> rk :> obj
-                        | "Timestamp" when f.PropertyType = typeof<DateTimeOffset> -> timestamp :> obj
+                        match (f.Name, f.GetCustomAttribute<EtagAttribute>(), f.GetCustomAttribute<TimestampAttribute>()) with
+                        | ("PartitionKey", _ , _) when f.PropertyType = typeof<string> -> pk :> obj
+                        | ("RowKey", _, _) when f.PropertyType = typeof<string> -> rk :> obj
+                        | ("Timestamp", _, _) when f.PropertyType = typeof<DateTimeOffset> -> timestamp :> obj
+                        | (_, _, ts) when ts <> null && f.PropertyType = typeof<DateTimeOffset> -> timestamp :> obj
+                        | (_, et, _) when et <> null && f.PropertyType = typeof<string> -> etag :> obj
                         | _ -> runtimeGetUncheckedDefault f.PropertyType)
                 |> Seq.toArray
             (recordWriter propValues), { Etag = etag; Timestamp = timestamp }
@@ -121,11 +130,19 @@ module Table =
                 notImplemented()
 
             member __.WriteEntity(_) =
+
+                let filter (info : PropertyInfo, _) =
+                    info.Name <> "PartitionKey"
+                    && info.Name <> "RowKey"
+                    && info.GetCustomAttribute<EtagAttribute>() = null
+                    && info.GetCustomAttribute<TimestampAttribute>() = null
+
                 record
                 |> recordReader
                 |> Seq.map (unwrapIfOption >> EntityProperty.CreateEntityPropertyFromObject)
-                |> Seq.zip (recordFields |> Seq.map (fun p -> p.Name))
-                |> Seq.filter (fun (name, _) -> name <> "PartitionKey" && name <> "RowKey")
+                |> Seq.zip (recordFields)
+                |> Seq.filter (filter)
+                |> Seq.map (fun (info, obj) -> (info.Name, obj))
                 |> dict
 
     [<AbstractClass; Sealed>]

@@ -40,6 +40,12 @@ type TypeWithSystemProps =
       [<RowKey>] RowKey : string;
       Timestamp : DateTimeOffset }
 
+type TypeWithSystemPropsAttributes =
+  { [<PartitionKey>] PartitionKey : string;
+    [<RowKey>] RowKey : string;
+    [<Timestamp>] Modified: DateTimeOffset option;
+    [<Etag>] tag : string option }
+
 type GameTableEntity() =
     inherit Microsoft.WindowsAzure.Storage.Table.TableEntity()
     member val Name : string = null with get,set
@@ -475,6 +481,26 @@ let tests connectionString =
                   VeryWow = "Amaze" }
 
             let result = internalType |> Insert |> ts.InGameTable
+
+            result.HttpStatusCode |> Expect.equal "Status code equals 204" 204
+
+        gameTestCase "inserting an record type with system attributes and no values works" <| fun ts ->
+            let data =
+                { TypeWithSystemPropsAttributes.PartitionKey = "Some Nice Partition Key"
+                  RowKey = "Yup this is a row key"
+                  Modified = None
+                  tag = None }
+            let result = data |> Insert |> ts.InGameTable
+
+            result.HttpStatusCode |> Expect.equal "Status code equals 204" 204
+
+        gameTestCase "inserting an record type with system attributes and values works" <| fun ts ->
+            let data =
+                { TypeWithSystemPropsAttributes.PartitionKey = "Some Nice Partition Key"
+                  RowKey = "Yup this is a row key"
+                  Modified = Some DateTimeOffset.Now
+                  tag = Some "Some tag" }
+            let result = data |> Insert |> ts.InGameTable
 
             result.HttpStatusCode |> Expect.equal "Status code equals 204" 204
     ]
