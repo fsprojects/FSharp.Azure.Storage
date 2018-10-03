@@ -422,20 +422,22 @@ let tests connectionString =
                 |> fst
 
             retrievedGame |> Expect.equal "Retrieved game should be correct" game
-            
-            
-        gameTestCase "querying for a record that has option type fields with none value works when filtering by the option-types properties" <| fun ts ->
-                    let game =
-                        { Name = "Transistor"
-                          Platform = "PC"
-                          Developer = "Supergiant Games"
-                          HasMultiplayer = None
-                          Notes = Some "From the same studio that made Bastion" }
-        
-                    let result = game |> Insert |> inTable tableClient ts.Name
-                    result.HttpStatusCode |> Expect.equal "Status code should be 204" 204              
-        
-                    (fun () -> Query.all<GameWithOptions> |> Query.where <@ fun g _ -> g.HasMultiplayer = None && g.Notes = game.Notes @> |> ignore) |> Expect.throwsT<Exception> "Throws exception" 
+
+        gameTestCase "querying for a record and filtering using a None option value is not supported by table storage" <| fun ts ->
+            let game =
+                { Name = "Transistor"
+                  Platform = "PC"
+                  Developer = "Supergiant Games"
+                  HasMultiplayer = None
+                  Notes = Some "From the same studio that made Bastion" }
+
+            let result = game |> Insert |> inTable tableClient ts.Name
+            result.HttpStatusCode |> Expect.equal "Status code should be 204" 204
+
+            (fun () -> Query.all<GameWithOptions>
+                       |> Query.where <@ fun g _ -> g.HasMultiplayer = None && g.Notes = game.Notes @>
+                       |> ignore)
+            |> Expect.throwsT<Exception> "Throws exception"
 
         gameTestCase "querying for a record type that is internal works" <| fun ts ->
             let game =
@@ -472,43 +474,42 @@ let tests connectionString =
                 |> fst
 
             retrievedGame |> Expect.equal "Retrieved game should be correct" game
-            
+
         gameTestCase "querying for a record type with URI works" <| fun ts ->
-                    let game =
-                        { GameWithUri.Name = "Transistor"
-                          Developer = "Supergiant Games"
-                          HasMultiplayer = true 
-                          Website = Uri ("https://example.org")}
-        
-                    let result = game |> Insert |> inTable tableClient ts.Name
-                    result.HttpStatusCode |> Expect.equal "Status code should be 204" 204
-        
-                    let retrievedGame =
-                        Query.all<GameWithUri>
-                        |> Query.where <@ fun _ s -> s.PartitionKey = game.Developer && s.RowKey = game.Name @>
-                        |> ts.FromGameTable
-                        |> Seq.head
-                        |> fst
-        
-                    retrievedGame |> Expect.equal "Retrieved game should be correct" game
-                    
-                    
+            let game =
+                { GameWithUri.Name = "Transistor"
+                  Developer = "Supergiant Games"
+                  HasMultiplayer = true
+                  Website = Uri ("https://example.org")}
+
+            let result = game |> Insert |> inTable tableClient ts.Name
+            result.HttpStatusCode |> Expect.equal "Status code should be 204" 204
+
+            let retrievedGame =
+                Query.all<GameWithUri>
+                |> Query.where <@ fun _ s -> s.PartitionKey = game.Developer && s.RowKey = game.Name @>
+                |> ts.FromGameTable
+                |> Seq.head
+                |> fst
+
+            retrievedGame |> Expect.equal "Retrieved game should be correct" game
+
         gameTestCase "querying for a record type with URI option works" <| fun ts ->
-                    let game =
-                        { GameWithUriOptions.Name = "Transistor"
-                          Developer = "Supergiant Games"
-                          Website = Some (Uri ("https://example.org"))}
-        
-                    let result = game |> Insert |> inTable tableClient ts.Name
-                    result.HttpStatusCode |> Expect.equal "Status code should be 204" 204
-        
-                    let retrievedGame =
-                        Query.all<GameWithUriOptions>
-                        |> Query.where <@ fun _ s -> s.PartitionKey = game.Developer && s.RowKey = game.Name @>
-                        |> ts.FromGameTable
-                        |> Seq.head
-                        |> fst
-        
-                    retrievedGame |> Expect.equal "Retrieved game should be correct" game
+            let game =
+                { GameWithUriOptions.Name = "Transistor"
+                  Developer = "Supergiant Games"
+                  Website = Some (Uri ("https://example.org"))}
+
+            let result = game |> Insert |> inTable tableClient ts.Name
+            result.HttpStatusCode |> Expect.equal "Status code should be 204" 204
+
+            let retrievedGame =
+                Query.all<GameWithUriOptions>
+                |> Query.where <@ fun _ s -> s.PartitionKey = game.Developer && s.RowKey = game.Name @>
+                |> ts.FromGameTable
+                |> Seq.head
+                |> fst
+
+            retrievedGame |> Expect.equal "Retrieved game should be correct" game
 
     ]
