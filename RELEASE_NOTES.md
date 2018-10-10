@@ -1,3 +1,7 @@
+### 3.1.0
+* New Etag and Timestamp attributes that can be applied to record fields; the row's ETag and Timestamp will be written into those fields on query. These fields are ignored when writing back into table storage. (Thanks @coolya)
+* The System.Uri type is now supported as a record field type. (Thanks @coolya)
+
 ### 3.0.0
 * .NET Standard 2.0 support. NOTE: All sync functions (eg. fromTable, etc) are now sync-over-async functions. See https://github.com/Azure/azure-storage-net/issues/367
 * Fixed bug in fromTableAsync where take count wasn't respected
