@@ -61,6 +61,13 @@ type TypeWithSystemProps =
       [<RowKey>] RowKey : string;
       Timestamp : DateTimeOffset }
 
+
+type TypeWithSystemPropsAttributes =
+    { [<PartitionKey>] PartitionKey : string;
+      [<RowKey>] RowKey : string;
+      [<Timestamp>] Modified: DateTimeOffset option;
+      [<Etag>] tag : string option }
+
 type Simple = { [<PartitionKey>] PK : string; [<RowKey>] RK : string }
 
 type NonTableEntityClass() =
@@ -331,6 +338,23 @@ let tests connectionString =
             valveGames |> Seq.map (fun (g, _) -> g.RowKey) |> Expect.contains "Games should contain Portal" "Portal-PC"
             valveGames |> Seq.map (fun (g, _) -> g.RowKey) |> Expect.contains "Games should contain Portal 2" "Portal 2-PC"
             valveGames |> Seq.map (fun (g, _) -> g.Timestamp) |> Seq.filter (fun ts -> ts = (DateTimeOffset())) |> Expect.isEmpty "All timestamps should be non-default"
+
+            valveGames |> verifyMetadata
+
+
+        gameTestCase "query with a type that has system properties annotations on it" <| fun ts ->
+            let valveGames =
+                Query.all<TypeWithSystemPropsAttributes>
+                |> Query.where <@ fun _ s -> s.PartitionKey = "Valve" @>
+                |> fromTable tableClient ts.Name
+                |> Seq.toArray
+
+            valveGames |> Seq.map (fun (g, _) -> g.PartitionKey) |> Expect.allEqual "All PKs should be Valve" "Valve"
+            valveGames |> Seq.map (fun (g, _) -> g.RowKey) |> Expect.contains "Games should contain Half-Life 2" "Half-Life 2-PC"
+            valveGames |> Seq.map (fun (g, _) -> g.RowKey) |> Expect.contains "Games should contain Portal" "Portal-PC"
+            valveGames |> Seq.map (fun (g, _) -> g.RowKey) |> Expect.contains "Games should contain Portal 2" "Portal 2-PC"
+            valveGames |> Seq.map (fun (g, _) -> g.Modified) |> Seq.choose id |> Seq.filter (fun ts -> ts = (DateTimeOffset())) |> Expect.isEmpty "All timestamps should be non-default"
+            valveGames |> Seq.map (fun (g, _) -> g.tag) |> Seq.choose id |> Seq.filter (fun tag -> tag |> String.IsNullOrEmpty) |> Expect.isEmpty "All etags should be non-default"
 
             valveGames |> verifyMetadata
 
