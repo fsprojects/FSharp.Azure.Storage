@@ -29,6 +29,23 @@ type GameWithOptions =
         member g.GetIdentifier() =
             { PartitionKey = g.Developer; RowKey = g.Name + "-" + g.Platform }
 
+type GameWithUri =
+    { Name: string
+      Developer : string
+      HasMultiplayer: bool
+      Website : Uri }
+
+      interface IEntityIdentifiable with
+        member g.GetIdentifier() =
+            { PartitionKey = g.Developer; RowKey = g.Name}
+type GameWithUriOptions =
+    { Name: string
+      Developer : string
+      Website: Uri option}
+
+      interface IEntityIdentifiable with
+        member g.GetIdentifier() =
+            { PartitionKey = g.Developer; RowKey = g.Name }
 type Game =
     { Name: string
       Platform: string
@@ -406,6 +423,22 @@ let tests connectionString =
 
             retrievedGame |> Expect.equal "Retrieved game should be correct" game
 
+        gameTestCase "querying for a record and filtering using a None option value is not supported by table storage" <| fun ts ->
+            let game =
+                { Name = "Transistor"
+                  Platform = "PC"
+                  Developer = "Supergiant Games"
+                  HasMultiplayer = None
+                  Notes = Some "From the same studio that made Bastion" }
+
+            let result = game |> Insert |> inTable tableClient ts.Name
+            result.HttpStatusCode |> Expect.equal "Status code should be 204" 204
+
+            (fun () -> Query.all<GameWithOptions>
+                       |> Query.where <@ fun g _ -> g.HasMultiplayer = None && g.Notes = game.Notes @>
+                       |> ignore)
+            |> Expect.throwsT<Exception> "Throws exception"
+
         gameTestCase "querying for a record type that is internal works" <| fun ts ->
             let game =
                 { InternalGame.Name = "Transistor"
@@ -436,6 +469,43 @@ let tests connectionString =
             let retrievedGame =
                 Query.all<GameWithDateTime>
                 |> Query.where <@ fun g _ -> g.DevelopmentDate = game.DevelopmentDate && g.DevelopmentDateAsOffset = game.DevelopmentDateAsOffset @>
+                |> ts.FromGameTable
+                |> Seq.head
+                |> fst
+
+            retrievedGame |> Expect.equal "Retrieved game should be correct" game
+
+        gameTestCase "querying for a record type with URI works" <| fun ts ->
+            let game =
+                { GameWithUri.Name = "Transistor"
+                  Developer = "Supergiant Games"
+                  HasMultiplayer = true
+                  Website = Uri ("https://example.org")}
+
+            let result = game |> Insert |> inTable tableClient ts.Name
+            result.HttpStatusCode |> Expect.equal "Status code should be 204" 204
+
+            let retrievedGame =
+                Query.all<GameWithUri>
+                |> Query.where <@ fun _ s -> s.PartitionKey = game.Developer && s.RowKey = game.Name @>
+                |> ts.FromGameTable
+                |> Seq.head
+                |> fst
+
+            retrievedGame |> Expect.equal "Retrieved game should be correct" game
+
+        gameTestCase "querying for a record type with URI option works" <| fun ts ->
+            let game =
+                { GameWithUriOptions.Name = "Transistor"
+                  Developer = "Supergiant Games"
+                  Website = Some (Uri ("https://example.org"))}
+
+            let result = game |> Insert |> inTable tableClient ts.Name
+            result.HttpStatusCode |> Expect.equal "Status code should be 204" 204
+
+            let retrievedGame =
+                Query.all<GameWithUriOptions>
+                |> Query.where <@ fun _ s -> s.PartitionKey = game.Developer && s.RowKey = game.Name @>
                 |> ts.FromGameTable
                 |> Seq.head
                 |> fst

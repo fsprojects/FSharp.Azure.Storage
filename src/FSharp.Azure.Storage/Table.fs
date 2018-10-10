@@ -97,6 +97,8 @@ module Table =
                         | null -> runtimeGetUncheckedDefault f.PropertyType
                         | value when value.GetType() = typeof<DateTime> && underlyingPropertyType = typeof<DateTimeOffset> ->
                             DateTimeOffset(value :?> DateTime) |> wrapIfOption f.PropertyType
+                        | value when value.GetType() = typeof<string> && underlyingPropertyType = typeof<Uri> -> 
+                            Uri(value :?> string) |> wrapIfOption f.PropertyType
                         | value when value.GetType() <> underlyingPropertyType ->
                             failwithf "The property %s on type %s of type %s has deserialized as the incorrect type %s" f.Name typeof<'T>.Name f.PropertyType.Name (value.GetType().Name)
                         | value -> value |> wrapIfOption f.PropertyType
@@ -301,6 +303,8 @@ module Table =
             | :? (int option) as v -> TableQuery.GenerateFilterConditionForInt (propertyName, op |> toOperator, v.Value)
             | :? int64 as v -> TableQuery.GenerateFilterConditionForLong (propertyName, op |> toOperator, v)
             | :? (int64 option) as v -> TableQuery.GenerateFilterConditionForLong (propertyName, op |> toOperator, v.Value)
+            | :? Uri as v -> TableQuery.GenerateFilterCondition(propertyName, op |> toOperator, v.ToString())
+            | :? (Uri option) as v -> TableQuery.GenerateFilterCondition(propertyName, op |> toOperator, v.Value.ToString())
             | _ -> failwithf "Unexpected property type %s for property %s" type'.Name propertyName
 
         let private isPropertyComparisonAgainstBool expr =
