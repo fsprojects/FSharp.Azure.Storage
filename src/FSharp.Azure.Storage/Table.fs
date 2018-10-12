@@ -104,7 +104,7 @@ module Table =
                         | null -> runtimeGetUncheckedDefault f.PropertyType
                         | value when value.GetType() = typeof<DateTime> && underlyingPropertyType = typeof<DateTimeOffset> ->
                             DateTimeOffset(value :?> DateTime) |> wrapIfOption f.PropertyType
-                        | value when value.GetType() = typeof<string> && underlyingPropertyType = typeof<Uri> -> 
+                        | value when value.GetType() = typeof<string> && underlyingPropertyType = typeof<Uri> ->
                             Uri(value :?> string) |> wrapIfOption f.PropertyType
                         | value when value.GetType() <> underlyingPropertyType ->
                             failwithf "The property %s on type %s of type %s has deserialized as the incorrect type %s" f.Name typeof<'T>.Name f.PropertyType.Name (value.GetType().Name)
@@ -384,10 +384,10 @@ module Table =
 
     let inline private syncOverAsync a =
         a |> Async.UnwrapAggregateException |> Async.RunSynchronously
-    
-    module Task = 
-        open FSharp.Control.Tasks.V2 
-        
+
+    module Task =
+        open FSharp.Control.Tasks.V2
+
         let inTableAsync (client: CloudTableClient) tableName operation =
             task {
                 let table = client.GetTableReference tableName
@@ -402,7 +402,7 @@ module Table =
                 let! results = batchOperation |> table.ExecuteBatchAsync
                 return results |> Seq.map convertToOperationResult |> Seq.toList
             }
-            
+
         let fromTableSegmentedAsync (client: CloudTableClient) tableName continuationToken (query : EntityQuery<'T>) =
             let table = client.GetTableReference tableName
             let tableQuery = query.ToTableQuery()
@@ -412,29 +412,36 @@ module Table =
                 return result.Results, result.ContinuationToken |> toOption
             }
         let fromTableAsync (client: CloudTableClient) tableName (query : EntityQuery<'T>) =
-            let rec getSegmentAsync continutationToken resultsLength resultsList =
-                task {
-                    let! result, furtherContinuation = query |> fromTableSegmentedAsync client tableName continutationToken
-                    match furtherContinuation with
-                    | Some _ ->
-                        //When using segmentation, the table storage take param is applied to each segment not to the entire resultset
-                        //So we need to keep track of how many results we want to actually take and stop early if necessary
-                        let takeCount = query.TakeCount |> Option.defaultValue Int32.MaxValue
-                        let newResultsLength = resultsLength + result.Count
-                        if newResultsLength = takeCount then
-                            return result :> seq<_> :: resultsList
-                        elif newResultsLength > takeCount then
-                            return result.Take(takeCount - resultsLength) :: resultsList
-                        else
-                            return! result :> seq<_> :: resultsList |> getSegmentAsync furtherContinuation newResultsLength
-                    | None ->
-                        return result :> seq<_> :: resultsList
-                }
             task {
-                let! resultsList = getSegmentAsync None 0 []
-                return resultsList |> List.rev |> Seq.concat
+                let! fragmentResult = query |> fromTableSegmentedAsync client tableName None
+                let takeCount = query.TakeCount |> Option.defaultValue Int32.MaxValue
+
+                // we need to use mutation here because TaskBuilder.fs doesn't support tail recursion and the
+                // stack could blow up in case we have a very large result set.
+                // result is a normal dotnet List<T> and not a fsharp list so we mutate it.
+                let result = fragmentResult |> fst
+                let mutable token = fragmentResult |> snd
+
+                let mutable shouldContinue = (token |> Option.isSome) && result.Count < takeCount
+                while shouldContinue do
+                    //When using segmentation, the table storage take param is applied to each segment not to the entire resultset
+                    //So we need to keep track of how many results we want to actually take and stop early if necessary
+                    let! fragmentResult = query |> fromTableSegmentedAsync client tableName token
+                    let currentResult = fragmentResult |> fst
+
+                    token <- fragmentResult |> snd
+
+                    let totalSize = result.Count + currentResult.Count
+                    if totalSize > takeCount then
+                        result.AddRange(currentResult.Take(takeCount - result.Count))
+                        shouldContinue <- false
+                    else
+                        result.AddRange(currentResult)
+                        shouldContinue <- (token |> Option.isSome) && result.Count < takeCount
+
+                return (result :> seq<_>)
             }
-    
+
     let inTableAsync (client: CloudTableClient) tableName operation =
         async { return! Task.inTableAsync client tableName operation |> Async.AwaitTask }
 
@@ -474,7 +481,7 @@ module Table =
         async { return! Task.fromTableSegmentedAsync client tableName continuationToken query |> Async.AwaitTask }
 
     let fromTableAsync (client: CloudTableClient) tableName (query : EntityQuery<'T>) =
-        async { return! Task.fromTableAsync client tableName query |> Async.AwaitTask } 
+        async { return! Task.fromTableAsync client tableName query |> Async.AwaitTask }
 
     let fromTable client tableName query =
         fromTableAsync client tableName query |> syncOverAsync
