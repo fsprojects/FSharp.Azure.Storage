@@ -326,6 +326,17 @@ let tests connectionString =
             allSimples |> verifyMetadata
         }
 
+        testCaseAsync "async query that crosses segments with a take that is greater than the segment size" <| async {
+            use ts = new SimpleTempTable (tableClient)
+            do ts.InsertTestData() |> ignore
+            let! results =
+                Query.all<Simple>
+                |> Query.take 1100
+                |> fromTableAsync tableClient ts.Name
+
+            results |> Seq.length |> Expect.equal "Should return the number of rows taken" 1100
+        }
+
         gameTestCase "query with a type that has system properties on it" <| fun ts ->
             let valveGames =
                 Query.all<TypeWithSystemProps>

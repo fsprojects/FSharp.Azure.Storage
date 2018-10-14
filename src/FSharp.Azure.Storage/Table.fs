@@ -395,6 +395,7 @@ module Table =
                 let! result = tableOperation |> table.ExecuteAsync
                 return result |> convertToOperationResult
             }
+
         let inTableAsBatchAsync (client: CloudTableClient) tableName operations =
             task {
                 let table = client.GetTableReference tableName
@@ -411,35 +412,35 @@ module Table =
                 let! result = table.ExecuteQuerySegmentedAsync<'T * EntityMetadata>(tableQuery, EntityResolver(resolver), continuationToken |> toNullRef)
                 return result.Results, result.ContinuationToken |> toOption
             }
+
         let fromTableAsync (client: CloudTableClient) tableName (query : EntityQuery<'T>) =
             task {
-                let! fragmentResult = query |> fromTableSegmentedAsync client tableName None
                 let takeCount = query.TakeCount |> Option.defaultValue Int32.MaxValue
 
                 // we need to use mutation here because TaskBuilder.fs doesn't support tail recursion and the
                 // stack could blow up in case we have a very large result set.
-                // result is a normal dotnet List<T> and not a fsharp list so we mutate it.
-                let result = fragmentResult |> fst
-                let mutable token = fragmentResult |> snd
+                // allResults is a normal dotnet List<T> and not a fsharp list so we mutate it.
+                let allResults = List<'T * EntityMetadata>()
+                let mutable token = None
+                let mutable shouldContinue = true
 
-                let mutable shouldContinue = (token |> Option.isSome) && result.Count < takeCount
                 while shouldContinue do
                     //When using segmentation, the table storage take param is applied to each segment not to the entire resultset
                     //So we need to keep track of how many results we want to actually take and stop early if necessary
-                    let! fragmentResult = query |> fromTableSegmentedAsync client tableName token
-                    let currentResult = fragmentResult |> fst
+                    let! segmentResult = query |> fromTableSegmentedAsync client tableName token
+                    let currentResult = segmentResult |> fst
 
-                    token <- fragmentResult |> snd
+                    token <- segmentResult |> snd
 
-                    let totalSize = result.Count + currentResult.Count
+                    let totalSize = allResults.Count + currentResult.Count
                     if totalSize > takeCount then
-                        result.AddRange(currentResult.Take(takeCount - result.Count))
+                        allResults.AddRange(currentResult.Take(takeCount - allResults.Count))
                         shouldContinue <- false
                     else
-                        result.AddRange(currentResult)
-                        shouldContinue <- (token |> Option.isSome) && result.Count < takeCount
+                        allResults.AddRange(currentResult)
+                        shouldContinue <- (token |> Option.isSome) && allResults.Count < takeCount
 
-                return (result :> seq<_>)
+                return (allResults :> seq<_>)
             }
 
     let inTableAsync (client: CloudTableClient) tableName operation =
