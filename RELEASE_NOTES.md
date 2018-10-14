@@ -1,3 +1,6 @@
+### 3.2.0
+* New FSharp.Azure.Storage.Table.Task module that contains Task<T> implementations of the async functions. (Thanks @coolya)
+
 ### 3.1.0
 * New Etag and Timestamp attributes that can be applied to record fields; the row's ETag and Timestamp will be written into those fields on query. These fields are ignored when writing back into table storage. (Thanks @coolya)
 * The System.Uri type is now supported as a record field type. (Thanks @coolya)
