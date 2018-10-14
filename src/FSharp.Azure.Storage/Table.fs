@@ -104,7 +104,7 @@ module Table =
                         | null -> runtimeGetUncheckedDefault f.PropertyType
                         | value when value.GetType() = typeof<DateTime> && underlyingPropertyType = typeof<DateTimeOffset> ->
                             DateTimeOffset(value :?> DateTime) |> wrapIfOption f.PropertyType
-                        | value when value.GetType() = typeof<string> && underlyingPropertyType = typeof<Uri> -> 
+                        | value when value.GetType() = typeof<string> && underlyingPropertyType = typeof<Uri> ->
                             Uri(value :?> string) |> wrapIfOption f.PropertyType
                         | value when value.GetType() <> underlyingPropertyType ->
                             failwithf "The property %s on type %s of type %s has deserialized as the incorrect type %s" f.Name typeof<'T>.Name f.PropertyType.Name (value.GetType().Name)
@@ -385,24 +385,71 @@ module Table =
     let inline private syncOverAsync a =
         a |> Async.UnwrapAggregateException |> Async.RunSynchronously
 
-    let inTableAsync (client: CloudTableClient) tableName operation =
-        async {
+    module Task =
+        open FSharp.Control.Tasks.V2
+
+        let inTableAsync (client: CloudTableClient) tableName operation =
+            task {
+                let table = client.GetTableReference tableName
+                let tableOperation = operation |> convertToTableOperation
+                let! result = tableOperation |> table.ExecuteAsync
+                return result |> convertToOperationResult
+            }
+        let inTableAsBatchAsync (client: CloudTableClient) tableName operations =
+            task {
+                let table = client.GetTableReference tableName
+                let batchOperation = operations |> createBatchOperation
+                let! results = batchOperation |> table.ExecuteBatchAsync
+                return results |> Seq.map convertToOperationResult |> Seq.toList
+            }
+
+        let fromTableSegmentedAsync (client: CloudTableClient) tableName continuationToken (query : EntityQuery<'T>) =
             let table = client.GetTableReference tableName
-            let tableOperation = operation |> convertToTableOperation
-            let! result = tableOperation |> table.ExecuteAsync |> Async.AwaitTask
-            return result |> convertToOperationResult
-        }
+            let tableQuery = query.ToTableQuery()
+            let resolver = EntityTypeCache.Resolver.Value //Do not inline this otherwise FSharp will delay execution of .Value until the resolver delegate is called
+            task {
+                let! result = table.ExecuteQuerySegmentedAsync<'T * EntityMetadata>(tableQuery, EntityResolver(resolver), continuationToken |> toNullRef)
+                return result.Results, result.ContinuationToken |> toOption
+            }
+        let fromTableAsync (client: CloudTableClient) tableName (query : EntityQuery<'T>) =
+            task {
+                let! fragmentResult = query |> fromTableSegmentedAsync client tableName None
+                let takeCount = query.TakeCount |> Option.defaultValue Int32.MaxValue
+
+                // we need to use mutation here because TaskBuilder.fs doesn't support tail recursion and the
+                // stack could blow up in case we have a very large result set.
+                // result is a normal dotnet List<T> and not a fsharp list so we mutate it.
+                let result = fragmentResult |> fst
+                let mutable token = fragmentResult |> snd
+
+                let mutable shouldContinue = (token |> Option.isSome) && result.Count < takeCount
+                while shouldContinue do
+                    //When using segmentation, the table storage take param is applied to each segment not to the entire resultset
+                    //So we need to keep track of how many results we want to actually take and stop early if necessary
+                    let! fragmentResult = query |> fromTableSegmentedAsync client tableName token
+                    let currentResult = fragmentResult |> fst
+
+                    token <- fragmentResult |> snd
+
+                    let totalSize = result.Count + currentResult.Count
+                    if totalSize > takeCount then
+                        result.AddRange(currentResult.Take(takeCount - result.Count))
+                        shouldContinue <- false
+                    else
+                        result.AddRange(currentResult)
+                        shouldContinue <- (token |> Option.isSome) && result.Count < takeCount
+
+                return (result :> seq<_>)
+            }
+
+    let inTableAsync (client: CloudTableClient) tableName operation =
+        async { return! Task.inTableAsync client tableName operation |> Async.AwaitTask }
 
     let inTable client tableName operation =
         inTableAsync client tableName operation |> syncOverAsync
 
     let inTableAsBatchAsync (client: CloudTableClient) tableName operations =
-        async {
-            let table = client.GetTableReference tableName
-            let batchOperation = operations |> createBatchOperation
-            let! results = batchOperation |> table.ExecuteBatchAsync |> Async.AwaitTask
-            return results |> Seq.map convertToOperationResult |> Seq.toList
-        }
+        async { return! Task.inTableAsBatchAsync client tableName operations |> Async.AwaitTask }
 
     let inTableAsBatch client tableName operations =
         inTableAsBatchAsync client tableName operations |> syncOverAsync
@@ -431,37 +478,10 @@ module Table =
         |> Seq.toList
 
     let fromTableSegmentedAsync (client: CloudTableClient) tableName continuationToken (query : EntityQuery<'T>) =
-        let table = client.GetTableReference tableName
-        let tableQuery = query.ToTableQuery()
-        let resolver = EntityTypeCache.Resolver.Value //Do not inline this otherwise FSharp will delay execution of .Value until the resolver delegate is called
-        async {
-            let! result = table.ExecuteQuerySegmentedAsync<'T * EntityMetadata>(tableQuery, EntityResolver(resolver), continuationToken |> toNullRef) |> Async.AwaitTask
-            return result.Results, result.ContinuationToken |> toOption
-        }
+        async { return! Task.fromTableSegmentedAsync client tableName continuationToken query |> Async.AwaitTask }
 
     let fromTableAsync (client: CloudTableClient) tableName (query : EntityQuery<'T>) =
-        let rec getSegmentAsync continutationToken resultsLength resultsList =
-            async {
-                let! result, furtherContinuation = query |> fromTableSegmentedAsync client tableName continutationToken
-                match furtherContinuation with
-                | Some _ ->
-                    //When using segmentation, the table storage take param is applied to each segment not to the entire resultset
-                    //So we need to keep track of how many results we want to actually take and stop early if necessary
-                    let takeCount = query.TakeCount |> Option.defaultValue Int32.MaxValue
-                    let newResultsLength = resultsLength + result.Count
-                    if newResultsLength = takeCount then
-                        return result :> seq<_> :: resultsList
-                    elif newResultsLength > takeCount then
-                        return result.Take(takeCount - resultsLength) :: resultsList
-                    else
-                        return! result :> seq<_> :: resultsList |> getSegmentAsync furtherContinuation newResultsLength
-                | None ->
-                    return result :> seq<_> :: resultsList
-            }
-        async {
-            let! resultsList = getSegmentAsync None 0 []
-            return resultsList |> List.rev |> Seq.concat
-        }
+        async { return! Task.fromTableAsync client tableName query |> Async.AwaitTask }
 
     let fromTable client tableName query =
         fromTableAsync client tableName query |> syncOverAsync
