@@ -113,6 +113,8 @@ module Table =
                             Uri(value :?> string) |> wrapIfOption f.PropertyType
                         | value when value.GetType() = typeof<string> && FSharpType.IsUnion underlyingPropertyType ->
                             unionFromString underlyingPropertyType (value :?> string) |> wrapIfOption f.PropertyType
+                        | value when underlyingPropertyType.IsEnum ->
+                            Enum.Parse(underlyingPropertyType, (value :?> string)) |> wrapIfOption f.PropertyType
                         | value when value.GetType() <> underlyingPropertyType ->
                             failwithf "The property %s on type %s of type %s has deserialized as the incorrect type %s" f.Name typeof<'T>.Name f.PropertyType.Name (value.GetType().Name)
                         | value -> value |> wrapIfOption f.PropertyType

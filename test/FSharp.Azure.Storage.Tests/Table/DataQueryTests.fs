@@ -132,6 +132,13 @@ type TypeWithUnionProperty =
       [<RowKey>] RowKey : string;
       UnionProp: UnionProperty; }
 
+type EnumProperty = A = 1 | B = 2 | C = 3
+type TypeWithEnumProperty =
+    { [<PartitionKey>] PartitionKey : string;
+      [<RowKey>] RowKey : string;
+      EnumProp: EnumProperty; }
+
+
 let private processInParallel tableClient tableName operation =
     Seq.map operation
     >> autobatch
@@ -564,5 +571,17 @@ let tests connectionString =
                 |> fromTable tableClient ts.Name
                 |> Seq.head
             output.UnionProp |> Expect.equal "Retrieved union property correctly" A
+
+        testCase "querying for a record type with eum works" <| fun () ->
+            use ts = new SimpleTempTable (tableClient)
+            let data = { PartitionKey = "PK"; RowKey = "RK"; EnumProp = EnumProperty.C }
+
+            data |> Insert |> inTable tableClient ts.Name |> ignore
+
+            let (output, _) =
+                Query.all<TypeWithEnumProperty>
+                |> fromTable tableClient ts.Name
+                |> Seq.head
+            output.EnumProp |> Expect.equal "Retrieved enum property correctly" EnumProperty.C
 
     ]
