@@ -61,6 +61,11 @@ module Table =
 
     let private isRecordType t = FSharpType.IsRecord (t, Reflection.BindingFlags.Public ||| Reflection.BindingFlags.NonPublic)
 
+    let private unionFromString (t: Type) (s:string) =
+        match FSharpType.GetUnionCases t |> Array.filter (fun case -> case.Name = s) with
+        |[|case|] -> FSharpValue.MakeUnion(case,[||])
+        |_ -> failwithf "The value %s is not a valid union case for %s" s t.Name
+
     [<AbstractClass; Sealed>]
     type EntityIdentiferReader<'T> private () =
         static let buildIdentiferFromAttributesFunc() =
@@ -106,6 +111,8 @@ module Table =
                             DateTimeOffset(value :?> DateTime) |> wrapIfOption f.PropertyType
                         | value when value.GetType() = typeof<string> && underlyingPropertyType = typeof<Uri> ->
                             Uri(value :?> string) |> wrapIfOption f.PropertyType
+                        | value when value.GetType() = typeof<string> && FSharpType.IsUnion underlyingPropertyType ->
+                            unionFromString underlyingPropertyType (value :?> string) |> wrapIfOption f.PropertyType
                         | value when value.GetType() <> underlyingPropertyType ->
                             failwithf "The property %s on type %s of type %s has deserialized as the incorrect type %s" f.Name typeof<'T>.Name f.PropertyType.Name (value.GetType().Name)
                         | value -> value |> wrapIfOption f.PropertyType
