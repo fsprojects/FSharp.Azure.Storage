@@ -138,7 +138,6 @@ type TypeWithEnumProperty =
       [<RowKey>] RowKey : string;
       EnumProp: EnumProperty; }
 
-
 let private processInParallel tableClient tableName operation =
     Seq.map operation
     >> autobatch
