@@ -572,7 +572,7 @@ let tests connectionString =
                 |> Seq.head
             output.UnionProp |> Expect.equal "Retrieved union property correctly" A
 
-        testCase "querying for a record type with eum works" <| fun () ->
+        testCase "querying for a record type with enum works" <| fun () ->
             use ts = new SimpleTempTable (tableClient)
             let data = { PartitionKey = "PK"; RowKey = "RK"; EnumProp = EnumProperty.C }
 
