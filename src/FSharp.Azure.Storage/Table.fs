@@ -61,10 +61,10 @@ module Table =
 
     let private isRecordType t = FSharpType.IsRecord (t, Reflection.BindingFlags.Public ||| Reflection.BindingFlags.NonPublic)
 
-    let private unionFromString (t: Type) (s:string) =
-        match FSharpType.GetUnionCases t |> Array.filter (fun case -> case.Name = s) with
-        |[|case|] -> FSharpValue.MakeUnion(case,[||])
-        |_ -> failwithf "The value %s is not a valid union case for %s" s t.Name
+    let private unionFromString t s =
+        match FSharpType.GetUnionCases t |> Array.tryFind (fun case -> case.Name = s) with
+        | Some case -> FSharpValue.MakeUnion(case,[||])
+        | None -> failwithf "The value %s is not a valid union case for %s" s t.Name
 
     [<AbstractClass; Sealed>]
     type EntityIdentiferReader<'T> private () =
