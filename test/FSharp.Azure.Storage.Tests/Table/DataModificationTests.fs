@@ -72,6 +72,14 @@ type TypeWithEnumProperty =
       [<RowKey>] RowKey : string;
       EnumProp: EnumProperty; }
 
+type UnionWithFieldProperty =
+    | X of string
+    | Y
+type TypeWithUnionWithFeidlProperty =
+    { [<PartitionKey>] PartitionKey : string;
+      [<RowKey>] RowKey : string;
+      UnionWithFieldProp: UnionWithFieldProperty; }
+
 type GameTempTable (tableClient) =
     inherit Storage.TempTable (tableClient)
 
@@ -531,4 +539,11 @@ let tests connectionString =
             let result = data |> Insert |> inTable tableClient ts.Name
 
             result.HttpStatusCode |> Expect.equal "Status code equals 204" 204
+
+        testCase "inserting a record type with union that has fields property fails" <| fun () ->
+            use ts = new Storage.TempTable (tableClient)
+            let data = { PartitionKey = "PK"; RowKey = "RK"; UnionWithFieldProp = X("x") }
+
+            (fun () -> data |> Insert |> inTable tableClient ts.Name |> ignore)
+                |> Expect.throws "Union with field"
     ]

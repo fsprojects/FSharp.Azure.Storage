@@ -62,9 +62,14 @@ module Table =
     let private isRecordType t = FSharpType.IsRecord (t, Reflection.BindingFlags.Public ||| Reflection.BindingFlags.NonPublic)
 
     let private unionFromString t s =
-        match FSharpType.GetUnionCases t |> Array.tryFind (fun case -> case.Name = s) with
-        | Some case -> FSharpValue.MakeUnion(case,[||])
-        | None -> failwithf "The value %s is not a valid union case for %s" s t.Name
+        let cases = FSharpType.GetUnionCases t
+        match cases |> Array.exists (fun case -> case.GetFields() |> Array.isEmpty |> not) with
+        | true ->
+            failwithf "The union %s has cases with fields, which is unsupported" t.Name
+        | false ->
+            match cases |> Array.tryFind (fun case -> case.Name = s) with
+            | Some case -> FSharpValue.MakeUnion(case,[||])
+            | None -> failwithf "The value %s is not a valid union case for %s" s t.Name
 
     [<AbstractClass; Sealed>]
     type EntityIdentiferReader<'T> private () =
@@ -97,6 +102,19 @@ module Table =
             FSharpValue.PreComputeRecordReader (typeof<'T>, true)
         static let recordWriter =
             FSharpValue.PreComputeRecordConstructor (typeof<'T>, true) >> (fun o -> o :?> 'T)
+
+        let x = recordFields
+                  |> Array.filter(fun pi -> FSharpType.IsUnion pi.PropertyType)
+        let y = x |> Array.exists(fun pi -> FSharpType.GetUnionCases pi.ReflectedType
+                                            |> Array.exists (fun case -> case.GetFields()
+                                                                         |> Array.isEmpty |> not ) )
+
+        do
+            match recordFields
+                  |> Array.filter(fun pi -> FSharpType.IsUnion pi.PropertyType)
+                  |> Array.exists(fun pi -> FSharpType.GetUnionCases pi.ReflectedType |> Array.exists (fun case -> case.GetFields() |> Array.isEmpty |> not)) with
+            | true -> failwithf "Record %s has properties that contains one or more union types with fields, which is unsupported" typeof<'T>.Name
+            | false -> ignore()
 
         static member ResolveRecord (pk : string) (rk : string) (timestamp: DateTimeOffset) (properties : IDictionary<string, EntityProperty>) (etag : string) =
             let propValues =
