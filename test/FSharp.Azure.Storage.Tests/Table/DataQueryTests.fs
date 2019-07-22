@@ -138,6 +138,15 @@ type TypeWithEnumProperty =
       [<RowKey>] RowKey : string;
       EnumProp: EnumProperty; }
 
+type UnionWithFieldProperty =
+    | X of string
+    | Y
+type TypeWithUnionWithFeidlProperty =
+    { [<PartitionKey>] PartitionKey : string;
+      [<RowKey>] RowKey : string;
+      UnionWithFieldProp: UnionWithFieldProperty; }
+  
+
 let private processInParallel tableClient tableName operation =
     Seq.map operation
     >> autobatch
@@ -570,6 +579,19 @@ let tests connectionString =
                 |> fromTable tableClient ts.Name
                 |> Seq.head
             output.UnionProp |> Expect.equal "Retrieved union property correctly" A
+
+        testCase "querying for a record type with union with fields fails" <| fun () ->
+            use ts = new SimpleTempTable (tableClient)
+            let data = { PartitionKey = "PK"; RowKey = "RK"; UnionProp = A }
+
+            data |> Insert |> inTable tableClient ts.Name |> ignore
+
+            (fun () -> 
+                Query.all<TypeWithUnionWithFeidlProperty>
+                |> fromTable tableClient ts.Name
+                |> Seq.head
+                |> ignore )
+            |> Expect.throws "Union with field"
 
         testCase "querying for a record type with enum works" <| fun () ->
             use ts = new SimpleTempTable (tableClient)
