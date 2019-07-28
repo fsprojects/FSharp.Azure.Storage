@@ -1,6 +1,6 @@
 namespace FSharp.Azure.Storage
 
-open System;
+open System
 
 module Table =
 
@@ -63,13 +63,9 @@ module Table =
 
     let private unionFromString t s =
         let cases = FSharpType.GetUnionCases t
-        match cases |> Array.exists (fun case -> case.GetFields() |> Array.isEmpty |> not) with
-        | true ->
-            failwithf "The union %s has cases with fields, which is unsupported" t.Name
-        | false ->
-            match cases |> Array.tryFind (fun case -> case.Name = s) with
-            | Some case -> FSharpValue.MakeUnion(case,[||])
-            | None -> failwithf "The value %s is not a valid union case for %s" s t.Name
+        match cases |> Array.tryFind (fun case -> case.Name = s) with
+        | Some case -> FSharpValue.MakeUnion (case,[||])
+        | None -> failwithf "The value %s is not a valid union case for %s" s t.Name
 
     [<AbstractClass; Sealed>]
     type EntityIdentiferReader<'T> private () =
@@ -102,21 +98,29 @@ module Table =
             FSharpValue.PreComputeRecordReader (typeof<'T>, true)
         static let recordWriter =
             FSharpValue.PreComputeRecordConstructor (typeof<'T>, true) >> (fun o -> o :?> 'T)
+        static let propertiesWithUnionTypesThatHaveCasesWithFields =
+            recordFields
+            |> Seq.collect (fun pi ->
+                let underlyingType = getUnderlyingTypeIfOption pi.PropertyType
+                if FSharpType.IsUnion underlyingType then
+                    FSharpType.GetUnionCases underlyingType
+                    |> Seq.filter (fun case -> case.GetFields() |> Array.isEmpty |> not)
+                    |> Seq.map (fun case -> (pi, underlyingType, case))
+                else
+                    Seq.empty
+            )
+            |> Seq.toArray
+        static let throwIfPropertiesAreOfUnionTypesThatHaveCasesWithFields () =
+            if propertiesWithUnionTypesThatHaveCasesWithFields.Length > 0 then
+                propertiesWithUnionTypesThatHaveCasesWithFields
+                |> Seq.map (fun (pi, underlyingType, case) -> sprintf "- Field '%s' using union type '%s' has case '%s' that has fields" pi.Name underlyingType.FullName case.Name)
+                |> String.join Environment.NewLine
+                |> failwithf "Record %s has properties that contains one or more union types with fields, which is unsupported.%s%s" typeof<'T>.FullName Environment.NewLine
 
-        let x = recordFields
-                  |> Array.filter(fun pi -> FSharpType.IsUnion pi.PropertyType)
-        let y = x |> Array.exists(fun pi -> FSharpType.GetUnionCases pi.ReflectedType
-                                            |> Array.exists (fun case -> case.GetFields()
-                                                                         |> Array.isEmpty |> not ) )
-
-        do
-            match recordFields
-                  |> Array.filter(fun pi -> FSharpType.IsUnion pi.PropertyType)
-                  |> Array.exists(fun pi -> FSharpType.GetUnionCases pi.ReflectedType |> Array.exists (fun case -> case.GetFields() |> Array.isEmpty |> not)) with
-            | true -> failwithf "Record %s has properties that contains one or more union types with fields, which is unsupported" typeof<'T>.Name
-            | false -> ignore()
+        do throwIfPropertiesAreOfUnionTypesThatHaveCasesWithFields ()
 
         static member ResolveRecord (pk : string) (rk : string) (timestamp: DateTimeOffset) (properties : IDictionary<string, EntityProperty>) (etag : string) =
+            throwIfPropertiesAreOfUnionTypesThatHaveCasesWithFields ()
             let propValues =
                 recordFields
                 |> Seq.map (fun f ->

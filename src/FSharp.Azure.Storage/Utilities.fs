@@ -2,6 +2,9 @@ namespace FSharp.Azure.Storage
 
 open System;
 
+module internal String =
+    let inline join (separator : string) (strs : string seq) = String.Join (separator, strs)
+
 module internal Async =
     let Raise (e : #exn) =
         Async.FromContinuations(fun (_,econt,_) -> econt e)
