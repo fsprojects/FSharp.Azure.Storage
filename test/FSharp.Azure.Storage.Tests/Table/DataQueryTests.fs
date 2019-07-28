@@ -141,11 +141,11 @@ type TypeWithEnumProperty =
 type UnionWithFieldProperty =
     | X of string
     | Y
-type TypeWithUnionWithFeidlProperty =
+type TypeWithUnionWithFieldProperty =
     { [<PartitionKey>] PartitionKey : string;
       [<RowKey>] RowKey : string;
       UnionWithFieldProp: UnionWithFieldProperty; }
-  
+
 
 let private processInParallel tableClient tableName operation =
     Seq.map operation
@@ -586,8 +586,8 @@ let tests connectionString =
 
             data |> Insert |> inTable tableClient ts.Name |> ignore
 
-            (fun () -> 
-                Query.all<TypeWithUnionWithFeidlProperty>
+            (fun () ->
+                Query.all<TypeWithUnionWithFieldProperty>
                 |> fromTable tableClient ts.Name
                 |> Seq.head
                 |> ignore )

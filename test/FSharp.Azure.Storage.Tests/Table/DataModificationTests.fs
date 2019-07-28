@@ -75,7 +75,7 @@ type TypeWithEnumProperty =
 type UnionWithFieldProperty =
     | X of string
     | Y
-type TypeWithUnionWithFeidlProperty =
+type TypeWithUnionWithFieldProperty =
     { [<PartitionKey>] PartitionKey : string;
       [<RowKey>] RowKey : string;
       UnionWithFieldProp: UnionWithFieldProperty; }
