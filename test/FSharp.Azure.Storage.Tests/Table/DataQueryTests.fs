@@ -126,6 +126,27 @@ type GameTableEntityWithIgnoredProperty() =
             |> Seq.choose (fun o -> match o with | null -> None | o -> Some (o.GetHashCode()))
             |> Seq.reduce (^^^)
 
+type UnionProperty = A | B | C
+type TypeWithUnionProperty =
+    { [<PartitionKey>] PartitionKey : string;
+      [<RowKey>] RowKey : string;
+      UnionProp: UnionProperty; }
+
+type EnumProperty = A = 1 | B = 2 | C = 3
+type TypeWithEnumProperty =
+    { [<PartitionKey>] PartitionKey : string;
+      [<RowKey>] RowKey : string;
+      EnumProp: EnumProperty; }
+
+type UnionWithFieldProperty =
+    | X of string
+    | Y
+type TypeWithUnionWithFieldProperty =
+    { [<PartitionKey>] PartitionKey : string;
+      [<RowKey>] RowKey : string;
+      UnionWithFieldProp: UnionWithFieldProperty; }
+
+
 let private processInParallel tableClient tableName operation =
     Seq.map operation
     >> autobatch
@@ -546,5 +567,42 @@ let tests connectionString =
                 |> fst
 
             retrievedGame |> Expect.equal "Retrieved game should be correct" game
+
+        testCase "querying for a record type with union works" <| fun () ->
+            use ts = new SimpleTempTable (tableClient)
+            let data = { PartitionKey = "PK"; RowKey = "RK"; UnionProp = A }
+
+            data |> Insert |> inTable tableClient ts.Name |> ignore
+
+            let (output, _) =
+                Query.all<TypeWithUnionProperty>
+                |> fromTable tableClient ts.Name
+                |> Seq.head
+            output.UnionProp |> Expect.equal "Retrieved union property correctly" A
+
+        testCase "querying for a record type with union with fields fails" <| fun () ->
+            use ts = new SimpleTempTable (tableClient)
+            let data = { PartitionKey = "PK"; RowKey = "RK"; UnionProp = A }
+
+            data |> Insert |> inTable tableClient ts.Name |> ignore
+
+            (fun () ->
+                Query.all<TypeWithUnionWithFieldProperty>
+                |> fromTable tableClient ts.Name
+                |> Seq.head
+                |> ignore )
+            |> Expect.throws "Union with field"
+
+        testCase "querying for a record type with enum works" <| fun () ->
+            use ts = new SimpleTempTable (tableClient)
+            let data = { PartitionKey = "PK"; RowKey = "RK"; EnumProp = EnumProperty.C }
+
+            data |> Insert |> inTable tableClient ts.Name |> ignore
+
+            let (output, _) =
+                Query.all<TypeWithEnumProperty>
+                |> fromTable tableClient ts.Name
+                |> Seq.head
+            output.EnumProp |> Expect.equal "Retrieved enum property correctly" EnumProperty.C
 
     ]

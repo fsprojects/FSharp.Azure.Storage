@@ -1,6 +1,6 @@
 namespace FSharp.Azure.Storage
 
-open System;
+open System
 
 module Table =
 
@@ -61,6 +61,12 @@ module Table =
 
     let private isRecordType t = FSharpType.IsRecord (t, Reflection.BindingFlags.Public ||| Reflection.BindingFlags.NonPublic)
 
+    let private unionFromString t s =
+        let cases = FSharpType.GetUnionCases t
+        match cases |> Array.tryFind (fun case -> case.Name = s) with
+        | Some case -> FSharpValue.MakeUnion (case,[||])
+        | None -> failwithf "The value %s is not a valid union case for %s" s t.Name
+
     [<AbstractClass; Sealed>]
     type EntityIdentiferReader<'T> private () =
         static let buildIdentiferFromAttributesFunc() =
@@ -92,8 +98,29 @@ module Table =
             FSharpValue.PreComputeRecordReader (typeof<'T>, true)
         static let recordWriter =
             FSharpValue.PreComputeRecordConstructor (typeof<'T>, true) >> (fun o -> o :?> 'T)
+        static let propertiesWithUnionTypesThatHaveCasesWithFields =
+            recordFields
+            |> Seq.collect (fun pi ->
+                let underlyingType = getUnderlyingTypeIfOption pi.PropertyType
+                if FSharpType.IsUnion underlyingType then
+                    FSharpType.GetUnionCases underlyingType
+                    |> Seq.filter (fun case -> case.GetFields() |> Array.isEmpty |> not)
+                    |> Seq.map (fun case -> (pi, underlyingType, case))
+                else
+                    Seq.empty
+            )
+            |> Seq.toArray
+        static let throwIfPropertiesAreOfUnionTypesThatHaveCasesWithFields () =
+            if propertiesWithUnionTypesThatHaveCasesWithFields.Length > 0 then
+                propertiesWithUnionTypesThatHaveCasesWithFields
+                |> Seq.map (fun (pi, underlyingType, case) -> sprintf "- Field '%s' using union type '%s' has case '%s' that has fields" pi.Name underlyingType.FullName case.Name)
+                |> String.join Environment.NewLine
+                |> failwithf "Record %s has properties that contains one or more union types with fields, which is unsupported.%s%s" typeof<'T>.FullName Environment.NewLine
+
+        do throwIfPropertiesAreOfUnionTypesThatHaveCasesWithFields ()
 
         static member ResolveRecord (pk : string) (rk : string) (timestamp: DateTimeOffset) (properties : IDictionary<string, EntityProperty>) (etag : string) =
+            throwIfPropertiesAreOfUnionTypesThatHaveCasesWithFields ()
             let propValues =
                 recordFields
                 |> Seq.map (fun f ->
@@ -106,6 +133,10 @@ module Table =
                             DateTimeOffset(value :?> DateTime) |> wrapIfOption f.PropertyType
                         | value when value.GetType() = typeof<string> && underlyingPropertyType = typeof<Uri> ->
                             Uri(value :?> string) |> wrapIfOption f.PropertyType
+                        | value when value.GetType() = typeof<string> && FSharpType.IsUnion underlyingPropertyType ->
+                            unionFromString underlyingPropertyType (value :?> string) |> wrapIfOption f.PropertyType
+                        | value when underlyingPropertyType.IsEnum ->
+                            Enum.Parse(underlyingPropertyType, (value :?> string)) |> wrapIfOption f.PropertyType
                         | value when value.GetType() <> underlyingPropertyType ->
                             failwithf "The property %s on type %s of type %s has deserialized as the incorrect type %s" f.Name typeof<'T>.Name f.PropertyType.Name (value.GetType().Name)
                         | value -> value |> wrapIfOption f.PropertyType

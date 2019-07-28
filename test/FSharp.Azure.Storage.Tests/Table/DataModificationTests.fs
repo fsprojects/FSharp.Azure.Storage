@@ -60,6 +60,26 @@ type internal InternalRecord =
     { [<PartitionKey>] MuchInternal: string
       [<RowKey>] VeryWow: string }
 
+type UnionProperty = A | B | C
+type TypeWithUnionProperty =
+    { [<PartitionKey>] PartitionKey : string;
+      [<RowKey>] RowKey : string;
+      UnionProp: UnionProperty; }
+
+type EnumProperty = A = 1 | B = 2 | C = 3
+type TypeWithEnumProperty =
+    { [<PartitionKey>] PartitionKey : string;
+      [<RowKey>] RowKey : string;
+      EnumProp: EnumProperty; }
+
+type UnionWithFieldProperty =
+    | X of string
+    | Y
+type TypeWithUnionWithFieldProperty =
+    { [<PartitionKey>] PartitionKey : string;
+      [<RowKey>] RowKey : string;
+      UnionWithFieldProp: UnionWithFieldProperty; }
+
 type GameTempTable (tableClient) =
     inherit Storage.TempTable (tableClient)
 
@@ -503,4 +523,27 @@ let tests connectionString =
             let result = data |> Insert |> ts.InGameTable
 
             result.HttpStatusCode |> Expect.equal "Status code equals 204" 204
+
+        testCase "inserting a record type with union property works" <| fun () ->
+            use ts = new Storage.TempTable (tableClient)
+            let data = { PartitionKey = "PK"; RowKey = "RK"; UnionProp = A }
+
+            let result = data |> Insert |> inTable tableClient ts.Name
+
+            result.HttpStatusCode |> Expect.equal "Status code equals 204" 204
+
+        testCase "inserting a record type with enum property works" <| fun () ->
+            use ts = new Storage.TempTable (tableClient)
+            let data = { PartitionKey = "PK"; RowKey = "RK"; EnumProp = EnumProperty.A }
+
+            let result = data |> Insert |> inTable tableClient ts.Name
+
+            result.HttpStatusCode |> Expect.equal "Status code equals 204" 204
+
+        testCase "inserting a record type with union that has fields property fails" <| fun () ->
+            use ts = new Storage.TempTable (tableClient)
+            let data = { PartitionKey = "PK"; RowKey = "RK"; UnionWithFieldProp = X("x") }
+
+            (fun () -> data |> Insert |> inTable tableClient ts.Name |> ignore)
+                |> Expect.throws "Union with field"
     ]
