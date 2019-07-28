@@ -1,3 +1,6 @@
+### 3.3.0
+* Support for record fields typed as union types that do not have fields. (Thanks @aaronpowell)
+
 ### 3.2.0
 * New FSharp.Azure.Storage.Table.Task module that contains Task<T> implementations of the async functions. (Thanks @coolya)
 
