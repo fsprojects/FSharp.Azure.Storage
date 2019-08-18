@@ -419,24 +419,27 @@ module Table =
     module Task =
         open FSharp.Control.Tasks.V2
 
-        let inTableAsync (client: CloudTableClient) tableName operation =
+        let inCloudTableAsync (table: CloudTable) operation =
             task {
-                let table = client.GetTableReference tableName
                 let tableOperation = operation |> convertToTableOperation
                 let! result = tableOperation |> table.ExecuteAsync
                 return result |> convertToOperationResult
             }
 
-        let inTableAsBatchAsync (client: CloudTableClient) tableName operations =
+        let inTableAsync (client: CloudTableClient) tableName operation = 
+            inCloudTableAsync (client.GetTableReference tableName) operation
+
+        let inCloudTableAsBatchAsync (table: CloudTable) operations =
             task {
-                let table = client.GetTableReference tableName
                 let batchOperation = operations |> createBatchOperation
                 let! results = batchOperation |> table.ExecuteBatchAsync
                 return results |> Seq.map convertToOperationResult |> Seq.toList
             }
 
-        let fromTableSegmentedAsync (client: CloudTableClient) tableName continuationToken (query : EntityQuery<'T>) =
-            let table = client.GetTableReference tableName
+        let inTableAsBatchAsync (client: CloudTableClient) tableName operations =
+            inCloudTableAsBatchAsync (client.GetTableReference tableName) operations
+
+        let fromCloudTableSegmentedAsync (table: CloudTable) continuationToken (query : EntityQuery<'T>) =
             let tableQuery = query.ToTableQuery()
             let resolver = EntityTypeCache.Resolver.Value //Do not inline this otherwise FSharp will delay execution of .Value until the resolver delegate is called
             task {
@@ -444,7 +447,10 @@ module Table =
                 return result.Results, result.ContinuationToken |> toOption
             }
 
-        let fromTableAsync (client: CloudTableClient) tableName (query : EntityQuery<'T>) =
+        let fromTableSegmentedAsync (client: CloudTableClient) tableName continuationToken (query : EntityQuery<'T>) =
+            fromCloudTableSegmentedAsync (client.GetTableReference tableName) continuationToken query
+        
+        let fromCloudTableAsync (table: CloudTable) (query : EntityQuery<'T>) =
             task {
                 let takeCount = query.TakeCount |> Option.defaultValue Int32.MaxValue
 
@@ -458,7 +464,7 @@ module Table =
                 while shouldContinue do
                     //When using segmentation, the table storage take param is applied to each segment not to the entire resultset
                     //So we need to keep track of how many results we want to actually take and stop early if necessary
-                    let! segmentResult = query |> fromTableSegmentedAsync client tableName token
+                    let! segmentResult = query |> fromCloudTableSegmentedAsync table token
                     let currentResult = segmentResult |> fst
 
                     token <- segmentResult |> snd
@@ -474,14 +480,29 @@ module Table =
                 return (allResults :> seq<_>)
             }
 
+        let fromTableAsync (client: CloudTableClient) tableName (query : EntityQuery<'T>) =
+            fromCloudTableAsync (client.GetTableReference tableName) query        
+
+    let inCloudTableAsync table operation = 
+        async { return! Task.inCloudTableAsync table operation |> Async.AwaitTask }
+
     let inTableAsync (client: CloudTableClient) tableName operation =
         async { return! Task.inTableAsync client tableName operation |> Async.AwaitTask }
+
+    let inCloudTable table operation =
+        inCloudTableAsync table operation |> syncOverAsync
 
     let inTable client tableName operation =
         inTableAsync client tableName operation |> syncOverAsync
 
+    let inCloudTableAsBatchAsync table operations = 
+        async { return! Task.inCloudTableAsBatchAsync table operations |> Async.AwaitTask }
+
     let inTableAsBatchAsync (client: CloudTableClient) tableName operations =
         async { return! Task.inTableAsBatchAsync client tableName operations |> Async.AwaitTask }
+
+    let inCloudTableAsBatch table operations =
+        inCloudTableAsBatchAsync table operations |> syncOverAsync
 
     let inTableAsBatch client tableName operations =
         inTableAsBatchAsync client tableName operations |> syncOverAsync
@@ -509,14 +530,26 @@ module Table =
             |> Seq.map Seq.toList)
         |> Seq.toList
 
+    let fromCloudTableSegmentedAsync table continuationToken (query : EntityQuery<'T>) =
+        async { return! Task.fromCloudTableSegmentedAsync table continuationToken query |> Async.AwaitTask }
+
     let fromTableSegmentedAsync (client: CloudTableClient) tableName continuationToken (query : EntityQuery<'T>) =
         async { return! Task.fromTableSegmentedAsync client tableName continuationToken query |> Async.AwaitTask }
+
+    let fromCloudTableAsync table (query : EntityQuery<'T>) =
+        async { return! Task.fromCloudTableAsync table query |> Async.AwaitTask }
 
     let fromTableAsync (client: CloudTableClient) tableName (query : EntityQuery<'T>) =
         async { return! Task.fromTableAsync client tableName query |> Async.AwaitTask }
 
+    let fromCloudTable table query =
+        fromCloudTableAsync table query |> syncOverAsync
+
     let fromTable client tableName query =
         fromTableAsync client tableName query |> syncOverAsync
+
+    let fromCloudTableSegmented table continuationToken query =
+        fromCloudTableSegmentedAsync table continuationToken query |> syncOverAsync
 
     let fromTableSegmented client tableName continuationToken query =
         fromTableSegmentedAsync client tableName continuationToken query |> syncOverAsync
