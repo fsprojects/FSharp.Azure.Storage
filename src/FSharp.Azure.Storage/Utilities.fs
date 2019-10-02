@@ -93,6 +93,7 @@ module internal Utilities =
         | :? (double option) as opt -> opt.Value :> obj
         | :? (Guid option) as opt -> opt.Value :> obj
         | :? (int option) as opt -> opt.Value :> obj
+        | :? (int64 option) as opt -> opt.Value :> obj
         | :? (Uri option) as opt -> opt.Value :> obj
         | other -> other
 
@@ -108,6 +109,7 @@ module internal Utilities =
             | :? double as v -> Some v :> obj
             | :? Guid as v -> Some v :> obj
             | :? int as v -> Some v :> obj
+            | :? int64 as v -> Some v :> obj
             | :? Uri as v -> Some v :> obj
             | other -> other
         else o
