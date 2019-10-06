@@ -1,3 +1,6 @@
+### 3.3.1
+* Fixed using option type with int64. (Thanks @CameronAavik)
+
 ### 3.3.0
 * Support for record fields typed as union types that do not have fields. (Thanks @aaronpowell)
 
