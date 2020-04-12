@@ -2,11 +2,10 @@ module FSharp.Azure.Storage.Tests.Table.DataModificationTests
 
 open System
 open FSharp.Azure.Storage.Table
-open Microsoft.WindowsAzure.Storage
-open Microsoft.WindowsAzure.Storage.Table
 open Expecto
 open Expecto.Flip
 open FSharp.Azure.Storage.Tests
+open Microsoft.Azure.Cosmos.Table
 
 type GameWithOptions =
     { [<RowKey>] Name: string
@@ -47,7 +46,7 @@ type TypeWithSystemPropsAttributes =
     [<Etag>] tag : string option }
 
 type GameTableEntity() =
-    inherit Microsoft.WindowsAzure.Storage.Table.TableEntity()
+    inherit TableEntity()
     member val Name : string = null with get,set
     member val Platform : string = null with get,set
     member val Developer : string = null with get,set

@@ -10,8 +10,8 @@ module Table =
     open Microsoft.FSharp.Quotations
     open Microsoft.FSharp.Quotations.Patterns
     open Microsoft.FSharp.Reflection
+    open Microsoft.Azure.Cosmos.Table
     open Swensen.Unquote
-    open Microsoft.WindowsAzure.Storage.Table
     open Utilities
 
     let MaxBatchSize = 100

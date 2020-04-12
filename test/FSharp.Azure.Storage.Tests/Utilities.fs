@@ -3,7 +3,7 @@ namespace FSharp.Azure.Storage.Tests
 module Storage =
 
     open System
-    open Microsoft.WindowsAzure.Storage.Table
+    open Microsoft.Azure.Cosmos.Table
 
     type TempTable (client : CloudTableClient) =
         let name = sprintf "TestTable%s" (Guid.NewGuid().ToString("N"))
