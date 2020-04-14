@@ -1,14 +1,14 @@
 FSharp.Azure.Storage
 ====================
 
-FSharp.Azure.Storage is a wrapper over the standard Microsoft [WindowsAzure.Storage][1]
+FSharp.Azure.Storage is a wrapper over the standard Microsoft [Microsoft.Azure.Cosmos.Table][1]
 library that allows you to write idiomatic F# when talking to Azure.
 
 The standard storage API is fine when you're writing C#, however when you're
 using F# you want to be able to use immutable record types, use the native F#
 async support and generally write in a functional style.
 
-[1]: <https://github.com/Azure/azure-storage-net>
+[1]: <https://www.nuget.org/packages/Microsoft.Azure.Cosmos.Table>
 
 NuGet [![NuGet Status](https://img.shields.io/nuget/v/FSharp.Azure.Storage.svg?style=flat)](https://www.nuget.org/packages/FSharp.Azure.Storage/)
 -----
@@ -31,8 +31,7 @@ type Game =
 Now we'll define a helper function `inGameTable` that will allow us to persist these Game records to table storage into an existing table called "Games":
 
 ```f#
-open Microsoft.WindowsAzure.Storage
-open Microsoft.WindowsAzure.Storage.Table
+open Microsoft.Azure.Cosmos.Table
 
 let account = CloudStorageAccount.Parse "UseDevelopmentStorage=true;" //Or your connection string here
 let tableClient = account.CreateCloudTableClient()
