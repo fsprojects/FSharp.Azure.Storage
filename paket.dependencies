@@ -5,7 +5,7 @@ framework: auto-detect
 nuget FSharp.Core >= 4.1
 nuget TaskBuilder.fs >= 2.1.0
 nuget Unquote >= 4.0
-nuget Microsoft.Azure.Cosmos.Table
+nuget Microsoft.Azure.Cosmos.Table >= 1.0
 
 //Testing deps
 nuget Expecto
