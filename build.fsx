@@ -22,7 +22,7 @@ let releaseNotes =
 let latestReleaseNotes = List.head releaseNotes
 let previousReleaseNotes = List.item 1 releaseNotes
 
-Target.Description "Tags the current commit with the version and pushes the tag"
+Target.description "Tags the current commit with the version and pushes the tag"
 Target.create "GitTagAndPush" <| fun _ ->
     if not <| Git.Information.isCleanWorkingCopy "." then
         failwith "Please ensure the working copy is clean before performing a release"
@@ -41,7 +41,7 @@ Target.create "GitTagAndPush" <| fun _ ->
     Git.Branches.tag "." tag
     Git.Branches.pushTag "." remote tag
 
-Target.Description "Generates an AssemblyInfo file with version info"
+Target.description "Generates an AssemblyInfo file with version info"
 Target.create "GenerateAssemblyInfoFile" <| fun _ ->
     AssemblyInfoFile.createFSharp "./src/FSharp.Azure.Storage/obj/AssemblyInfo.Generated.fs" [
         AssemblyInfo.Title "FSharp.Azure.Storage"
@@ -53,20 +53,20 @@ Target.create "GenerateAssemblyInfoFile" <| fun _ ->
         AssemblyInfo.Metadata ("githash", Git.Information.getCurrentHash())
     ]
 
-Target.Description "Compiles the project using dotnet build"
+Target.description "Compiles the project using dotnet build"
 Target.create "Build" <| fun _ ->
     DotNet.build id "./FSharp.Azure.Storage.sln"
 
-Target.Description "Runs the expecto unit tests"
+Target.description "Runs the expecto unit tests"
 Target.create "Test" <| fun _ ->
     let result = DotNet.exec id "run" "--project ./test/FSharp.Azure.Storage.Tests -c Release"
     if not result.OK then failwithf "Tests failed with code %i" result.ExitCode
 
-Target.Description "Deletes the contents of the ./bin directory"
+Target.description "Deletes the contents of the ./bin directory"
 Target.create "PaketClean" <| fun _ ->
     Shell.cleanDir "./bin"
 
-Target.Description "Creates the NuGet package"
+Target.description "Creates the NuGet package"
 Target.create "PaketPack" <| fun _ ->
     Paket.pack <| fun p ->
         { p with
@@ -74,24 +74,24 @@ Target.create "PaketPack" <| fun _ ->
             Version = latestReleaseNotes.NugetVersion
             OutputPath = "./bin" }
 
-Target.Description "Ensures you have specified your NuGet API key in the NUGET_KEY env var"
+Target.description "Ensures you have specified your NuGet API key in the NUGET_KEY env var"
 Target.create "ValidateNugetApiKey" <| fun _ ->
     if String.IsNullOrWhiteSpace nugetApiKey then
         failwith "Please set the NUGET_KEY environment variable to your NuGet API Key"
 
-Target.Description "Pushes the NuGet package to the package repository"
+Target.description "Pushes the NuGet package to the package repository"
 Target.create "PaketPush" <| fun _ ->
     Paket.push <| fun p ->
         { p with
             WorkingDir = "./bin"
             ApiKey = nugetApiKey }
 
-Target.Description "Ensures you have specified your GitHub personal access token in the GITHUB_TOKEN env var"
+Target.description "Ensures you have specified your GitHub personal access token in the GITHUB_TOKEN env var"
 Target.create "ValidateGitHubCredentials" <| fun _ ->
         if String.IsNullOrWhiteSpace gitHubToken then
             failwith "Please set the GITHUB_TOKEN environment variable to a GitHub personal access token with repo access."
 
-Target.Description "Creates a release on GitHub with the release notes"
+Target.description "Creates a release on GitHub with the release notes"
 Target.create "GitHubRelease" <| fun _ ->
     let gitHubReleaseNotes =
         [ yield "## Changelog"
@@ -104,9 +104,9 @@ Target.create "GitHubRelease" <| fun _ ->
     |> GitHub.publishDraft
     |> Async.RunSynchronously
 
-Target.create "BeginRelease" Target.DoNothing
+Target.create "BeginRelease" ignore
 
-Target.create "PublishRelease" Target.DoNothing
+Target.create "PublishRelease" ignore
 
 open Fake.Core.TargetOperators
 
