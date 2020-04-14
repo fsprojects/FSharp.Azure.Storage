@@ -1,4 +1,4 @@
 FSharp.Core
-WindowsAzure.Storage
+Microsoft.Azure.Cosmos.Table
 Unquote
 TaskBuilder.fs

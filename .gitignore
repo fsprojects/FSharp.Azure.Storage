@@ -116,3 +116,4 @@ paket-files/
 
 .vs
 .ionide
+.fake
