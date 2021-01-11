@@ -84,6 +84,7 @@ Target.description "Pushes the NuGet package to the package repository"
 Target.create "PaketPush" <| fun _ ->
     Paket.push <| fun p ->
         { p with
+            ToolType = ToolType.CreateLocalTool()
             WorkingDir = "./bin"
             ApiKey = nugetApiKey }
 
