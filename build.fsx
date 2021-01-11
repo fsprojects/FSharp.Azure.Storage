@@ -70,6 +70,7 @@ Target.description "Creates the NuGet package"
 Target.create "PaketPack" <| fun _ ->
     Paket.pack <| fun p ->
         { p with
+            ToolType = ToolType.CreateLocalTool()
             ReleaseNotes = latestReleaseNotes.Notes |> List.map (fun s -> "- " + s) |> String.concat "\n"
             Version = latestReleaseNotes.NugetVersion
             OutputPath = "./bin" }
