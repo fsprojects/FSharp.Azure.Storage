@@ -1,3 +1,6 @@
+### 5.0.0
+* Fixed querying using DynamicTableEntity
+
 ### 4.0.0
 * Switched from using the WindowsAzure.Storage package, which is deprecated, to the Microsoft.Azure.Cosmos.Table package. NOTE: This is a breaking change, but simple to fix; just update namespaces (see PR#39) (Thanks @JohnDoeKyrgyz).
 
