@@ -1,5 +1,6 @@
-source https://www.nuget.org/api/v2
+source https://api.nuget.org/v3/index.json
 framework: auto-detect
+storage: none
 
 //Main deps
 nuget FSharp.Core >= 4.1
@@ -9,13 +10,13 @@ nuget Microsoft.Azure.Cosmos.Table >= 1.0
 
 //Testing deps
 nuget Expecto
-nuget Microsoft.NET.Test.Sdk
 
 group FakeBuild
-source https://www.nuget.org/api/v2
+source https://api.nuget.org/v3/index.json
 storage: none
+framework: netstandard2.0
 
-clitool dotnet-fake
+nuget FSharp.Core ~> 4.7 # FAKE currently requires this
 nuget Fake.Api.GitHub
 nuget Fake.Core.ReleaseNotes
 nuget Fake.Core.Target

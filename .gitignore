@@ -113,6 +113,7 @@ UpgradeLog*.XML
 .paket-files/
 xunit.html
 paket-files/
+.paket/
 
 .vs
 .ionide
