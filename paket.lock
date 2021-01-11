@@ -5,6 +5,8 @@ NUGET
     Expecto (9.0.2)
       FSharp.Core (>= 4.6)
       Mono.Cecil (>= 0.11.2)
+    FSharp.Control.AsyncSeq (2.0.24)
+      FSharp.Core (>= 4.3.2)
     FSharp.Core (5.0)
     Microsoft.Azure.Cosmos.Table (1.0.8)
       Microsoft.Azure.DocumentDB.Core (>= 2.11.2)

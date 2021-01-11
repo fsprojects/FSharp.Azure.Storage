@@ -1,5 +1,7 @@
 ### 5.0.0
+* New fromTableSegmentedAsyncSeq that returns an AsyncSeq of query segments
 * Fixed querying using DynamicTableEntity
+* Updated to use v5 of Unquote (potentially breaking if you're stuck on v4)
 
 ### 4.0.0
 * Switched from using the WindowsAzure.Storage package, which is deprecated, to the Microsoft.Azure.Cosmos.Table package. NOTE: This is a breaking change, but simple to fix; just update namespaces (see PR#39) (Thanks @JohnDoeKyrgyz).

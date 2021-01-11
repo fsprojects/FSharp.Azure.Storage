@@ -11,6 +11,7 @@ module Table =
     open Microsoft.FSharp.Quotations.Patterns
     open Microsoft.FSharp.Reflection
     open Microsoft.Azure.Cosmos.Table
+    open FSharp.Control
     open Swensen.Unquote
     open Utilities
 
@@ -513,6 +514,18 @@ module Table =
 
     let fromTableSegmentedAsync (client: CloudTableClient) tableName continuationToken (query : EntityQuery<'T>) =
         async { return! Task.fromTableSegmentedAsync client tableName continuationToken query |> Async.AwaitTask }
+
+    let fromTableSegmentedAsyncSeq (client: CloudTableClient) tableName (query : EntityQuery<'T>) =
+        AsyncSeq.unfoldAsync (fun token -> async {
+          match token with
+          | Some token ->
+            let! (rows, continuationToken) =
+              query
+              |> fromTableSegmentedAsync client tableName token
+            return Some (rows, continuationToken |> Option.map Some)
+          | None ->
+            return None
+        }) (Some None)
 
     let fromTableAsync (client: CloudTableClient) tableName (query : EntityQuery<'T>) =
         async { return! Task.fromTableAsync client tableName query |> Async.AwaitTask }
