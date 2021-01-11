@@ -106,6 +106,17 @@ type GameTempTable (tableClient) =
         entity.Properties.["Platform"].StringValue |> Expect.equal "Platform property is correct" game.Platform
         entity.Properties.["Developer"].StringValue |> Expect.equal "Developer property is correct" game.Developer
         entity.Properties.["HasMultiplayer"].BooleanValue |> Expect.equal "HasMultiplayer property is correct" (Nullable<bool> game.HasMultiplayer)
+    
+    member this.VerifyGameDynamicTableEntity (game : DynamicTableEntity) =
+        let result = TableOperation.Retrieve(game.PartitionKey, game.RowKey) |> this.Table.ExecuteAsync |> Async.AwaitTask |> Async.RunSynchronously
+        let entity = result.Result :?> DynamicTableEntity
+
+        entity.PartitionKey |> Expect.equal "PartitionKey is developer" game.PartitionKey
+        entity.RowKey |> Expect.equal "RowKey is name" game.RowKey
+        entity.Properties.["Name"] |> Expect.equal "Name property is correct" game.Properties.["Name"]
+        entity.Properties.["Platform"] |> Expect.equal "Platform property is correct" game.Properties.["Platform"]
+        entity.Properties.["Developer"] |> Expect.equal "Developer property is correct" game.Properties.["Developer"]
+        entity.Properties.["HasMultiplayer"] |> Expect.equal "HasMultiplayer property is correct" game.Properties.["HasMultiplayer"]
 
 let tests connectionString =
     EntityIdentiferReader.GetIdentifier <- getPureIdentifier
@@ -545,4 +556,19 @@ let tests connectionString =
 
             (fun () -> data |> Insert |> inTable tableClient ts.Name |> ignore)
                 |> Expect.throws "Union with field"
+        
+        gameTestCase "can insert a new record using DynamicTableEntity" <| fun ts ->
+            let properties = 
+                dict [
+                    "Name", EntityProperty.GeneratePropertyForString "Halo 4"
+                    "Platform", EntityProperty.GeneratePropertyForString "Xbox 360"
+                    "Developer", EntityProperty.GeneratePropertyForString "343 Industries"
+                    "HasMultiplayer", EntityProperty.GeneratePropertyForBool true
+                ]
+            let game = DynamicTableEntity("343 Industries", "Halo 4", null, properties)
+            
+            let result = game |> Insert |> ts.InGameTable
+
+            result.HttpStatusCode |> Expect.equal "Status code equals 204" 204
+            ts.VerifyGameDynamicTableEntity game
     ]

@@ -1,6 +1,7 @@
 module FSharp.Azure.Storage.Tests.Table.DataQueryTests
 
 open System
+open System.Collections.Generic
 open FSharp.Azure.Storage.Table
 open Expecto
 open Expecto.Flip
@@ -604,4 +605,24 @@ let tests connectionString =
                 |> Seq.head
             output.EnumProp |> Expect.equal "Retrieved enum property correctly" EnumProperty.C
 
+        gameTestCase "query using a DynamicTableEntity" <| fun ts ->
+            let halo4 =
+                Query.all<DynamicTableEntity>
+                |> Query.where <@ fun _ s -> s.PartitionKey = "343 Industries" && s.RowKey = "Halo 4-Xbox 360" @>
+                |> ts.FromGameTable
+                |> Seq.toArray
+
+            Expect.hasLength halo4 1 "One record returned"
+            let (record, _metadata) = halo4.[0]
+            
+            record.PartitionKey |> Expect.equal "PartitionKey is correct" "343 Industries"
+            record.RowKey |> Expect.equal "RowKey is correct" "Halo 4-Xbox 360"
+            record.Properties |> Seq.sortBy (fun kvp -> kvp.Key) |> Expect.sequenceEqual "Correct properties" ([
+                KeyValuePair("Developer", EntityProperty.GeneratePropertyForString("343 Industries"))
+                KeyValuePair("HasMultiplayer", EntityProperty.GeneratePropertyForBool(true))
+                KeyValuePair("Name", EntityProperty.GeneratePropertyForString("Halo 4"))
+                KeyValuePair("Platform", EntityProperty.GeneratePropertyForString("Xbox 360"))
+            ])
+            
+            halo4 |> verifyMetadata
     ]

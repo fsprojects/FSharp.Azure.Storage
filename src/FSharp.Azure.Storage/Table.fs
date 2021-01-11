@@ -211,6 +211,8 @@ module Table =
                 | _ -> None
 
             match typeof<'T> with
+            | t when typeof<DynamicTableEntity>.IsAssignableFrom t ->
+                Set.empty // It's dynamic so we don't know what properties to query for, so query them all
             | t when typeof<ITableEntity>.IsAssignableFrom t ->
                 t.GetProperties()
                 |> Seq.choose getTableEntityProperty
