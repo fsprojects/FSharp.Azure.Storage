@@ -1,4 +1,5 @@
+FSharp.Control.AsyncSeq
 FSharp.Core
 Microsoft.Azure.Cosmos.Table
-Unquote
 TaskBuilder.fs
+Unquote

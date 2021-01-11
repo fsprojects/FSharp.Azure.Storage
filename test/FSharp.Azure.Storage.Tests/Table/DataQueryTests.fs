@@ -5,6 +5,7 @@ open System.Collections.Generic
 open FSharp.Azure.Storage.Table
 open Expecto
 open Expecto.Flip
+open FSharp.Control
 open FSharp.Azure.Storage.Tests
 open Microsoft.Azure.Cosmos.Table
 
@@ -343,6 +344,19 @@ let tests connectionString =
             segmentToken2 |> Expect.isNone "SegmentToken1 should be None"
 
             let allSimples = [simples1; simples2] |> Seq.concat |> Seq.toArray
+            allSimples |> verifyRecords rows
+            allSimples |> verifyMetadata
+        }
+
+        testCaseAsync "AsyncSeq segmented query" <| async {
+            use ts = new SimpleTempTable (tableClient)
+            let rows = ts.InsertTestData()
+            let! allSimples =
+                Query.all<Simple>
+                |> fromTableSegmentedAsyncSeq tableClient ts.Name
+                |> AsyncSeq.concatSeq
+                |> AsyncSeq.toArrayAsync
+
             allSimples |> verifyRecords rows
             allSimples |> verifyMetadata
         }
