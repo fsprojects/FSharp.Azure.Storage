@@ -1,3 +1,6 @@
+### 5.0.1
+* Downgrade build to use FSharp.Core 4.7
+
 ### 5.0.0
 * New fromTableSegmentedAsyncSeq that returns an AsyncSeq of query segments
 * Fixed querying using DynamicTableEntity
