@@ -7,7 +7,7 @@ authors
 owners
 	Daniel Chambers & Contributors
 copyright
-    Copyright 2018
+    Copyright 2022
 summary
     A library that provides an idiomatic F# API for Microsoft Azure services.
 licenseurl https://github.com/fsprojects/FSharp.Azure.Storage/blob/master/LICENCE.txt

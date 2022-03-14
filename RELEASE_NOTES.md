@@ -1,3 +1,6 @@
+### 5.0.2
+* Upgrade FSharp.Control.Async dependency to >= 3.0.5
+
 ### 5.0.1
 * Downgrade build to use FSharp.Core 4.7
 
