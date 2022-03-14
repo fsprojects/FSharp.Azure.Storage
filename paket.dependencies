@@ -3,7 +3,7 @@ framework: auto-detect
 storage: none
 
 //Main deps
-nuget FSharp.Control.AsyncSeq ~> 2.0
+nuget FSharp.Control.AsyncSeq == 3.0.4
 nuget FSharp.Core >= 4.7
 nuget Microsoft.Azure.Cosmos.Table >= 1.0
 nuget TaskBuilder.fs >= 2.1.0
@@ -17,7 +17,7 @@ source https://api.nuget.org/v3/index.json
 storage: none
 framework: netstandard2.0
 
-nuget FSharp.Core ~> 4.7 # FAKE currently requires this
+nuget FSharp.Core ~> 5.0 # FAKE currently requires this
 nuget Fake.Api.GitHub
 nuget Fake.Core.ReleaseNotes
 nuget Fake.Core.Target
